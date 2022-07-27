@@ -32,9 +32,6 @@ def _ampgen_df(tree, sign: str) -> pd.DataFrame:
 
     suffixes = "Px", "Py", "Pz", "E"
 
-    # Note the order of the branches here
-    # To make it consistent with the MC, I have swapped the order of the pions so that we have K+pi-pi+pi-
-    # TODO no i havent
     branches = [
         *(f"_1_K~_{s}" for s in suffixes),
         *(f"_2_pi#_{s}" for s in suffixes),
@@ -66,9 +63,25 @@ def _mc_df(tree) -> pd.DataFrame:
         *(f"D0_P2_TRUE{s}" for s in suffixes),
         *(f"D0_P3_TRUE{s}" for s in suffixes),
     ]
+
     for branch in mc_branches:
         # Take the first value from each entry in the jagged array - this is the best fit value
         df[branch] = tree[branch].array()[keep]
+
+    # Flip 3 momenta of Dbar mesons
+    # Do this by creating an array of 1s and -1s and multiplying the 3-momenta by these
+    # 1 for D meson, -1 for Dbar
+    flip_momenta = np.ones(len(df))
+    dbars = tree["D0_TRUEID"].array()[keep] == -421
+    flip_momenta[dbars] = -1
+
+    for branch in (
+        *mc_branches[0:3],
+        *mc_branches[4:7],
+        *mc_branches[8:11],
+        *mc_branches[12:15],
+    ):
+        df[branch] *= flip_momenta
 
     return df
 
@@ -82,8 +95,7 @@ def _create_dump(
 ) -> None:
     """
     Create pickle dump of the momenta and decay times for D -> K3pi events.
-    AmpGen evts are all K+3pi - the equivalent phase space distribution for D -> K-3pi can be found by flipping the
-    3-momenta. Maybe I'll write a helper function for this
+    AmpGen evts are all K+3pi, I think
 
     :param gen: random number generator for train/test split
     :param sign: "RS" or "WS" - must be specified for MC. tells us which tree to read from the file
