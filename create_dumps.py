@@ -121,7 +121,7 @@ def _create_dump(
 
     # Dump it
     path = (
-        "mc.pkl" if mc else "ampgen.pkl"
+        f"mc_{sign}.pkl" if mc else "ampgen.pkl"
     )  # TODO nicer. Could use the definitions fcn, extend it to take ampgen
     with open(path, "wb") as f:
         print(f"dumping {path}")
@@ -134,7 +134,9 @@ def main(year: str, sign: str, mc: bool) -> None:
 
     """
     files = (
-        definitions.mc_files(year, "magdown") if mc else definitions.ampgen_files(sign)
+        definitions.mc_files(year, "magdown", sign)
+        if mc
+        else definitions.ampgen_files(sign)
     )
     gen = np.random.default_rng(seed=0)
     _create_dump(gen, files, sign, mc)

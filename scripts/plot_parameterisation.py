@@ -57,9 +57,10 @@ def main():
     Create a plot
 
     """
+    sign = "RS"
     with open("ampgen.pkl", "rb") as f:
         ampgen_df = pickle.load(f)
-    with open("mc.pkl", "rb") as f:
+    with open(f"mc_{sign}.pkl", "rb") as f:
         mc_df = pickle.load(f)
 
     ag_k, ag_pi1, ag_pi2, ag_pi3 = _k_3pi(ampgen_df)
