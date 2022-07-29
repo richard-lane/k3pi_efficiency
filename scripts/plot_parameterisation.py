@@ -7,6 +7,7 @@ the dataframes correctly.
 """
 import sys
 import pathlib
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
@@ -18,14 +19,11 @@ from lib_cuts.read_data import momentum_order
 from lib_efficiency import efficiency_util, plotting
 
 
-def main():
+def main(year: str, sign: str, magnetisation: str):
     """
     Create a plot
 
     """
-    sign = "RS"
-    year, magnetisation = "2018", "magdown"
-
     ampgen_df = efficiency_util.ampgen_dump(sign)
     mc_df = efficiency_util.mc_dump(year, sign, magnetisation)
 
@@ -46,4 +44,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Make plots of ampgen + MC phase space variables, but don't do the reweighting."
+    )
+    parser.add_argument("sign", type=str, choices={"RS", "WS"})
+    parser.add_argument("year", type=str, choices={"2018"})
+    parser.add_argument("magnetisation", type=str, choices={"magdown"})
+
+    args = parser.parse_args()
+    main(args.year, args.sign, args.magnetisation)

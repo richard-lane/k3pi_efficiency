@@ -9,8 +9,8 @@ classifier - TODO find a better solution for this, or something
 import sys
 import pickle
 import pathlib
+import argparse
 from multiprocessing import Process
-from typing import List
 import pandas as pd
 import numpy as np
 import uproot
@@ -46,7 +46,34 @@ def _ampgen_df(tree, sign: str) -> pd.DataFrame:
     return df
 
 
-def _mc_df(tree) -> pd.DataFrame:
+def _flip_momenta(d_ids: np.ndarray, sign: str, df: pd.DataFrame, mc_branches: list):
+    """
+    Flip 3 momenta of the right D meson
+
+    We want both types of decay to be to K+ (I think, TODO) so we need to flip RS D0s and WS Dbar0s
+
+    Modifies the dataframe in place
+
+    """
+    # TODO make this function much nicer
+    # Flip 3 momenta of D0 mesons
+    # Do this by creating an array of 1s and -1s and multiplying the 3-momenta by these
+    # -1 for D0 meson, 1 for Dbar0
+    correct_id = -421 if sign == "RS" else 421
+
+    flip_momenta = np.ones(len(df))
+    flip_momenta[d_ids != correct_id] = -1
+
+    for branch in (
+        *mc_branches[0:3],
+        *mc_branches[4:7],
+        *mc_branches[8:11],
+        *mc_branches[12:15],
+    ):
+        df[branch] *= flip_momenta
+
+
+def _mc_df(tree, sign: str) -> pd.DataFrame:
     """
     Populate a pandas dataframe with momenta and time arrays from the provided tree
 
@@ -69,20 +96,7 @@ def _mc_df(tree) -> pd.DataFrame:
         # Take the first value from each entry in the jagged array - this is the best fit value
         df[branch] = tree[branch].array()[keep]
 
-    # Flip 3 momenta of D0 mesons
-    # Do this by creating an array of 1s and -1s and multiplying the 3-momenta by these
-    # -1 for D0 meson, 1 for Dbar0
-    flip_momenta = np.ones(len(df))
-    d0s = tree["D0_TRUEID"].array()[keep] == 421
-    flip_momenta[d0s] = -1
-
-    for branch in (
-        *mc_branches[0:3],
-        *mc_branches[4:7],
-        *mc_branches[8:11],
-        *mc_branches[12:15],
-    ):
-        df[branch] *= flip_momenta
+    _flip_momenta(tree["D0_TRUEID"].array()[keep], sign, df, mc_branches)
 
     return df
 
@@ -114,14 +128,13 @@ def main(sign: str, year: str = None, magnetisation: str = None) -> None:
     # TODO maybe different seed
     gen = np.random.default_rng(seed=0)
 
-    df_fcn = _mc_df if year else lambda tree: _ampgen_df(tree, sign)
+    df_fcn = _mc_df if year else _ampgen_df
     tree_name = definitions.tree_name(sign) if is_mc else "DalitzEventList"
 
     dfs = []
     for root_file in files:
         with uproot.open(root_file) as f:
-            # TODO get the right tree for ampgen
-            df = df_fcn(f[tree_name])
+            df = df_fcn(f[tree_name], sign)
             df["train"] = gen.random(len(df)) < 0.5  # Half for test half for train
 
             dfs.append(df)
@@ -137,10 +150,28 @@ def main(sign: str, year: str = None, magnetisation: str = None) -> None:
         pickle.dump(pd.concat(dfs), f)
 
 
+def _parse_args() -> argparse.Namespace:
+    """
+    Read arguments from CLI, return the namespace
+
+    """
+    parser = argparse.ArgumentParser(
+        description="Create DataFrame pickle dumps containing the right info for"
+        "the efficiency reweighting. Reads ROOT files from the data "
+        "directory, which might live somewhere else"
+    )
+    parser.add_argument("sign", type=str, choices={"RS", "WS"})
+    parser.add_argument("year", type=str, choices={"2018"})
+    parser.add_argument("magnetisation", type=str, choices={"magdown"})
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = _parse_args()
     procs = [
-        Process(target=main, args=("RS", "2018", "magdown")),  # MC
-        Process(target=main, args=("RS",)),  # AmpGen
+        Process(target=main, args=(args.sign, args.year, args.magnetisation)),  # MC
+        Process(target=main, args=(args.sign,)),  # AmpGen
     ]
 
     for p in procs:

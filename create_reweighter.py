@@ -5,6 +5,7 @@ Create a reweighter
 import sys
 import pickle
 import pathlib
+import argparse
 import numpy as np
 from fourbody.param import helicity_param
 from lib_efficiency import efficiency_definitions, efficiency_util
@@ -64,5 +65,11 @@ def main(year: str, sign: str, magnetisation: str):
 
 
 if __name__ == "__main__":
-    # TODO argparse to pass these in
-    main("2018", "RS", "magdown")
+    parser = argparse.ArgumentParser(description="Create efficiency reweighters")
+    parser.add_argument("sign", type=str, choices={"RS", "WS"})
+    parser.add_argument("year", type=str, choices={"2018"})
+    parser.add_argument("magnetisation", type=str, choices={"magdown"})
+
+    args = parser.parse_args()
+
+    main(args.year, args.sign, args.magnetisation)
