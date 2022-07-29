@@ -24,6 +24,10 @@ def main(year: str, sign: str, magnetisation: str):
     ag_df = efficiency_util.ampgen_dump(sign)
     mc_df = efficiency_util.mc_dump(year, sign, magnetisation)
 
+    # We only want to train on training data
+    ag_df = ag_df[ag_df["train"]]
+    mc_df = mc_df[mc_df["train"]]
+
     # Get the right arrays
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ag_df)
     mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(mc_df)
@@ -36,9 +40,15 @@ def main(year: str, sign: str, magnetisation: str):
     ag = np.column_stack((helicity_param(ag_k, ag_pi1, ag_pi2, ag_pi3), ag_df["time"]))
     mc = np.column_stack((helicity_param(mc_k, mc_pi1, mc_pi2, mc_pi3), mc_df["time"]))
 
+    # Minimum time
+    min_t = efficiency_definitions.MIN_TIME
+    ag = ag[ag[:, -1] > min_t]
+    mc = mc[mc[:, -1] > min_t]
+
     # Choose time bins
     time_bins = np.quantile(mc[:, -1], [0.2, 0.4, 0.6, 0.8])
-    time_bins = np.concatenate(([0], time_bins, [10.0]))
+    time_bins = [0.5, 1, 1.5, 2]
+    time_bins = np.concatenate(([min_t], time_bins, [10.0]))
 
     # Create reweighter
     reweighter = Binned_Reweighter(time_bins, mc, ag)

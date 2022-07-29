@@ -35,19 +35,19 @@ class Efficiency_Weighter:
 
         """
         self._time_weighter = BinsReweighter()
-        # TODO maybe do the time reweighting the other way; i.e. reweight ampgen -> MC
-        self._time_weighter.fit(original=original[:, 5], target=target[:, 5])
+        # This is a bit strange - we're reweighting AmpGen -> MC to avoid getting really big weights
+        self._time_weighter.fit(target=original[:, 5], original=target[:, 5])
 
         self._phsp_weighter = GBReweighter(
             # n_estimators=650, max_depth=6, learning_rate=0.2, min_samples_leaf=800
-            n_estimators=10
+            # n_estimators=10
         )
 
         # TODO if we do the weighting the other way, need to weight the target not the original
         self._phsp_weighter.fit(
             original=original,
             target=target,
-            original_weight=self._time_weighter.predict_weights(original[:, 5]),
+            target_weight=self._time_weighter.predict_weights(target[:, 5]),
         )
 
     def time_weights(self, times: np.ndarray) -> np.ndarray:
@@ -55,7 +55,7 @@ class Efficiency_Weighter:
         Find weights to take mc -> AmpGen
 
         """
-        return self._time_weighter.predict_weights(times)
+        return 1 / self._time_weighter.predict_weights(times)
 
     def phsp_weights(self, phsp_points: np.ndarray) -> np.ndarray:
         """
@@ -188,6 +188,7 @@ class Binned_Reweighter:
         indices = np.digitize(points[:, 5], self._reweighter_bins) - 1
 
         # Init array of 0s
+        # This ensures that any points outside of our time bins get assigned a weight of exactly 0.0
         w = np.zeros(len(points))
 
         for i in range(self._n_bins):

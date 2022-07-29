@@ -15,7 +15,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_c
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from lib_cuts.read_data import momentum_order
-from lib_efficiency import efficiency_util
+from lib_efficiency import efficiency_util, plotting
 
 
 def main():
@@ -40,14 +40,7 @@ def main():
     )
     mc = np.column_stack((helicity_param(mc_k, mc_pi1, mc_pi2, mc_pi3), mc_df["time"]))
 
-    _, ax = plt.subplots(2, 3, figsize=(12, 8))
-
-    hist_kw = {"density": True, "histtype": "step"}
-    for axis, ag_x, mc_x in zip(ax.ravel(), ag.T, mc.T):
-        _, bins, _ = axis.hist(ag_x, bins=100, label="AG", **hist_kw)
-        axis.hist(mc_x, bins=bins, label="MC", **hist_kw)
-
-    ax[0, 0].legend()
+    plotting.projections(mc, ag)
 
     plt.show()
 

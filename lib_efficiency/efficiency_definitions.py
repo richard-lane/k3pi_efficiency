@@ -7,6 +7,9 @@ import pathlib
 REWEIGHTER_DIR = pathlib.Path(__file__).resolve().parents[1] / "reweighter"
 DATA_DIR = pathlib.Path(__file__).resolve().parents[1] / "data"
 
+# Time below which we just throw away events - the reweighting here is too unstable
+MIN_TIME = 0.3
+
 
 def mc_dump_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     """

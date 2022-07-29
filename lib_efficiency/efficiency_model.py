@@ -5,10 +5,6 @@ import pathlib
 import numpy as np
 from fourbody.param import helicity_param
 
-from .util import util
-from .util import definitions
-
-# from .reweighter import Efficiency_Weighter
 from . import efficiency_definitions
 from .reweighter import Binned_Reweighter
 
@@ -51,6 +47,9 @@ def weights(
         print(
             f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}\n\tN:\t{len(k.T)}"
         )
+        print(
+            f"{np.sum(t < efficiency_definitions.MIN_TIME)} times below minimum ({efficiency_definitions.MIN_TIME})"
+        )
 
     # Find the right reweighter to unpickle
     reweighter_path = efficiency_definitions.reweighter_path(year, sign, magnetisation)
@@ -59,7 +58,10 @@ def weights(
     if verbose:
         print(f"Opening reweighter at {reweighter_path}")
     with open(reweighter_path, "rb") as f:
-        reweighter: B = pickle.load(f)
+        reweighter: Binned_Reweighter = pickle.load(f)
+
+    # Momentum order
+    pi1, pi2 = momentum_order(k, pi1, pi2)
 
     # Parameterise event into 5+1d space
     parameterised_evts = np.column_stack(
@@ -69,7 +71,13 @@ def weights(
         )
     )
 
-    # Momentum order
-    pi1, pi2 = momentum_order(k, pi1, pi2)
+    weights = reweighter.weights(parameterised_evts)
+    if verbose:
+        print(f"{np.sum(weights == 0.0)} weights exactly 0.0")
 
-    return reweighter.weights(k, pi1, pi2, pi3, t)
+    # Typically we only expect to get a weight of exactly 0 if our points are outside of the time bins provided
+    # This should only really happen if points are below the minimum time
+    # This usually means that you've changed efficiency_definitions.MIN_TIME since the reweighter was trained
+    assert np.sum(weights == 0.0) == np.sum(t < efficiency_definitions.MIN_TIME)
+
+    return weights
