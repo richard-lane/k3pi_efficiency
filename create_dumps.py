@@ -69,12 +69,12 @@ def _mc_df(tree) -> pd.DataFrame:
         # Take the first value from each entry in the jagged array - this is the best fit value
         df[branch] = tree[branch].array()[keep]
 
-    # Flip 3 momenta of Dbar mesons
+    # Flip 3 momenta of D0 mesons
     # Do this by creating an array of 1s and -1s and multiplying the 3-momenta by these
-    # 1 for D meson, -1 for Dbar
+    # -1 for D0 meson, 1 for Dbar0
     flip_momenta = np.ones(len(df))
-    dbars = tree["D0_TRUEID"].array()[keep] == -421
-    flip_momenta[dbars] = -1
+    d0s = tree["D0_TRUEID"].array()[keep] == 421
+    flip_momenta[d0s] = -1
 
     for branch in (
         *mc_branches[0:3],
