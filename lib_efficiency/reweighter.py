@@ -1,5 +1,19 @@
+import sys
+from multiprocessing import Process, Manager
 import numpy as np
+import matplotlib.pyplot as plt
 from hep_ml.reweight import GBReweighter, BinsReweighter
+
+
+class TrainingError(Exception):
+    def __init__(self):
+        """
+        Error training the BDT or something
+
+        """
+        super().__init__(
+            "Error training the BDT; see above for child process tracebacks"
+        )
 
 
 class Efficiency_Weighter:
@@ -83,7 +97,29 @@ class Binned_Reweighter:
                 p.start()
             for p in procs[n_done : n_done + n_parallel]:
                 p.join()
+
+            # Check exit codes
+            for p in procs[n_done : n_done + n_parallel]:
+                if p.exitcode > 0:
+                    raise TrainingError
+
             n_done += n_parallel
+
+    def _check_underflow(self, indices: np.ndarray) -> None:
+        """
+        Check bin indices for underflow
+
+        """
+        if (indices < 0).any():
+            raise ValueError("underflow")
+
+    def _check_overflow(self, indices: np.ndarray) -> None:
+        """
+        Check bin indices for overflow
+
+        """
+        if (indices == (self._n_bins)).any():
+            raise ValueError("overflow")
 
     def __init__(
         self, time_bins: np.ndarray, mc_points: np.ndarray, ag_points: np.ndarray
@@ -91,16 +127,32 @@ class Binned_Reweighter:
         """
         Using the provided time bins, create an Efficiency_Weighter in each
 
+        Bins should cover the entire range of interest - from min time (leftmost edge) to the max time (rightmost edge)
+
         """
         self._mc_points = mc_points
         self._ag_points = ag_points
 
-        self._n_bins = len(time_bins - 1)
+        self._n_bins = len(time_bins) - 1
         self._reweighter_bins = time_bins
 
         # Bin times
         self._mc_indices = np.digitize(mc_points[:, 5], self._reweighter_bins) - 1
         self._ag_indices = np.digitize(ag_points[:, 5], self._reweighter_bins) - 1
+
+        # Check if any times have over/underflowed our bins
+        self._check_underflow(self._mc_indices)
+        self._check_underflow(self._ag_indices)
+        self._check_overflow(self._mc_indices)
+        self._check_overflow(self._ag_indices)
+
+        # Check that all bins are populated
+        assert (
+            len(np.unique(self._mc_indices)) == self._n_bins
+        ), "some bins contain no MC"
+        assert (
+            len(np.unique(self._ag_indices)) == self._n_bins
+        ), "some bins contain no ampgen"
 
         # Find the overall scaling we need to apply to the points
         _, mc_counts = np.unique(self._mc_indices, return_counts=True)

@@ -18,6 +18,7 @@ import uproot
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_signal_cuts"))
 
 from lib_cuts import read_data, definitions, cuts
+from lib_efficiency import efficiency_definitions
 
 
 def _ampgen_df(tree, sign: str) -> pd.DataFrame:
@@ -86,64 +87,61 @@ def _mc_df(tree) -> pd.DataFrame:
     return df
 
 
-def _create_dump(
-    gen: np.random.Generator,
-    files: List[str],
-    sign: str = None,
-    mc: bool = False,
-    train_fraction: float = 0.5,
-) -> None:
+def main(sign: str, year: str = None, magnetisation: str = None) -> None:
     """
     Create pickle dump of the momenta and decay times for D -> K3pi events.
     AmpGen evts are all K+3pi, I think
 
-    :param gen: random number generator for train/test split
-    :param sign: "RS" or "WS" - must be specified for MC. tells us which tree to read from the file
-    :param files: iterable of filepaths to read from
-    :param background: bool flag telling us whether this data is MC or AmpGen - we need to apply cuts to MC
-    :param train_fraction: how much data to set aside for testing/training.
+    :param sign: "RS" or "WS". Tells us which tree to read from the MC file,
+                 or tells us which AmpGen file to use.
+    :param year: data taking year - only needs to be specified for MC
 
     """
-    if sign is None and mc:
-        raise ValueError("Must provide sign for reading MC")
+    # Need to either specify both year + mag for MC, or dont need either for AmpGen
+    assert (year is None and magnetisation is None) or (
+        year is not None and magnetisation is not None
+    )
 
-    df_fcn = _mc_df if mc else lambda tree: _ampgen_df(tree, sign)
-    tree_name = definitions.tree_name(sign) if mc else "DalitzEventList"
+    # Make it more readable - we're dealing with MC if the year has been specified
+    is_mc = year is not None
+
+    files = (
+        definitions.mc_files(year, "magdown", sign)
+        if is_mc
+        else definitions.ampgen_files(sign)
+    )
+
+    # TODO maybe different seed
+    gen = np.random.default_rng(seed=0)
+
+    df_fcn = _mc_df if year else lambda tree: _ampgen_df(tree, sign)
+    tree_name = definitions.tree_name(sign) if is_mc else "DalitzEventList"
 
     dfs = []
     for root_file in files:
         with uproot.open(root_file) as f:
             # TODO get the right tree for ampgen
             df = df_fcn(f[tree_name])
-            df["train"] = gen.random(len(df)) < train_fraction
+            df["train"] = gen.random(len(df)) < 0.5  # Half for test half for train
 
             dfs.append(df)
 
     # Dump it
     path = (
-        f"mc_{sign}.pkl" if mc else "ampgen.pkl"
-    )  # TODO nicer. Could use the definitions fcn, extend it to take ampgen
+        efficiency_definitions.mc_dump_path(year, sign, magnetisation)
+        if is_mc
+        else efficiency_definitions.ampgen_dump_path(sign)
+    )
     with open(path, "wb") as f:
         print(f"dumping {path}")
         pickle.dump(pd.concat(dfs), f)
 
 
-def main(year: str, sign: str, mc: bool) -> None:
-    """
-    Create a pickle dump
-
-    """
-    files = (
-        definitions.mc_files(year, "magdown", sign)
-        if mc
-        else definitions.ampgen_files(sign)
-    )
-    gen = np.random.default_rng(seed=0)
-    _create_dump(gen, files, sign, mc)
-
-
 if __name__ == "__main__":
-    procs = [Process(target=main, args=("2018", "RS", mc)) for mc in (True, False)]
+    procs = [
+        Process(target=main, args=("RS", "2018", "magdown")),  # MC
+        Process(target=main, args=("RS",)),  # AmpGen
+    ]
 
     for p in procs:
         p.start()
