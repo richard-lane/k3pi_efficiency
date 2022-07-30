@@ -21,6 +21,13 @@ wrapper(double event[16], const int& kaonCharge, std::complex<double> (*ampFcn)(
     return Complex_t{retval.real(), retval.imag()};
 }
 
+/*
+ * We might end up allocating memory which won't get freed by the python garbage collector,
+ * so provide a function here to explicitly free an array
+ *
+ * Not sure if its strictly required to define this here
+ *
+ */
 extern "C" void
 manual_free(double* ptr){ free(ptr); }
 
