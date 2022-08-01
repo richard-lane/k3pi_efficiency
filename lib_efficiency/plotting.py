@@ -250,8 +250,9 @@ def _plot_hull(ax: plt.Axes, points: List[Tuple[float, float]], color: str) -> N
     """
     # Plot hulls
     hull = ConvexHull(points)
+    array_points = np.array(points)
     for s in hull.simplices:
-        ax.plot(np.array(points)[s, 0], np.array(points)[s, 1], f"{color}--", alpha=0.5)
+        ax.plot(array_points[s, 0], array_points[s, 1], f"{color}--", alpha=0.5)
 
 
 def z_scatter(
@@ -297,7 +298,7 @@ def z_scatter(
     reweighted_points = _chunks_z(orig_k, orig_pi1, orig_pi2, orig_pi3, n, orig_wt)
 
     # Plot stuff
-    ax.plot([x[0] for x in orig_points], [x[1] for x in target_points], "+", color="r")
+    ax.plot([x[0] for x in orig_points], [x[1] for x in orig_points], "+", color="r")
     ax.plot(
         [x[0] for x in target_points], [x[1] for x in target_points], "+", color="g"
     )
