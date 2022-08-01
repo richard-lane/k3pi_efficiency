@@ -128,6 +128,11 @@ def dcs_amplitudes(k, pi1, pi2, pi3, k_charge):
     generated directly by AmpGen), you should scale these yourself
     by multiplying by 1000
 
+    NB: note also that this amplitude is not scaled; to find
+    DCS amplitudes that have a relative strong phase of 0 wrt the
+    CF amplitudes and that also have the right scaling you should
+    scale and rotate these amplitudes by `definitions.DCS_OFFSET`.
+
     :param k: shape (4, N) array of kaon momenta (px, py, pz, e)
     :param pi1: shape (4, N) array of pion momenta (px, py, pz, e)
     :param pi2: shape (4, N) array of pion momenta (px, py, pz, e)

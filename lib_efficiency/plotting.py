@@ -2,10 +2,14 @@
 Functions for plotting things
 
 """
-from typing import Tuple
+from typing import Tuple, List
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from scipy.optimize import curve_fit
+from scipy.spatial import ConvexHull
+
+from . import phsp_binning
 
 
 def projections(
@@ -184,5 +188,147 @@ def plot_ratios(
 
     fig.tight_layout()
     plt.subplots_adjust(wspace=0)
+
+    return fig, ax
+
+
+def _chunks_z(
+    k: np.ndarray,
+    pi1: np.ndarray,
+    pi2: np.ndarray,
+    pi3: np.ndarray,
+    n: int,
+    weights: np.ndarray = None,
+) -> List[Tuple[float, float]]:
+    """
+    Split our arrays into n approx. equal chunks, evaluate Z for each chunk
+
+    :param k: (4, N) numpy array of k (px, py, pz, E). Assumes K+
+    :param pi1: (4, N) numpy array of pi1 (px, py, pz, E). Assumes pi-
+    :param pi2: (4, N) numpy array of pi2 (px, py, pz, E). Assumes pi-
+    :param pi3: (4, N) numpy array of pi3 (px, py, pz, E). Assumes pi+
+    :param n: number of chunks to spit our arrays into
+    :param weights: weights to apply when evaluating coherence factors
+
+    :returns: an n-length list of the coherence factor as (real, imag) for each chunk
+
+    """
+    if weights is None:
+        weights = np.ones(len(k[0]))
+
+    split_k = np.array_split(k, n, axis=1)
+    split_pi1 = np.array_split(pi1, n, axis=1)
+    split_pi2 = np.array_split(pi2, n, axis=1)
+    split_pi3 = np.array_split(pi3, n, axis=1)
+    split_weights = np.array_split(weights, n)
+
+    def z(mag: np.ndarray, phase: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        return re, im from mag and phase
+
+        """
+        return mag * np.cos(phase * np.pi / 180.0), mag * np.sin(phase * np.pi / 180.0)
+
+    points = []
+    for i in range(n):
+        this_z = phsp_binning.coherence_factor(
+            split_k[i],
+            split_pi1[i],
+            split_pi2[i],
+            split_pi3[i],
+            weights=split_weights[i],
+        )
+        points.append(z(*this_z))
+
+    return points
+
+
+def _plot_hull(ax: plt.Axes, points: List[Tuple[float, float]], color: str) -> None:
+    """
+    Plot the convex hull surrounding a set of points on an axis
+
+    """
+    # Plot hulls
+    hull = ConvexHull(points)
+    for s in hull.simplices:
+        ax.plot(np.array(points)[s, 0], np.array(points)[s, 1], f"{color}--", alpha=0.5)
+
+
+def z_scatter(
+    target_k: np.ndarray,
+    target_pi1: np.ndarray,
+    target_pi2: np.ndarray,
+    target_pi3: np.ndarray,
+    orig_k: np.ndarray,
+    orig_pi1: np.ndarray,
+    orig_pi2: np.ndarray,
+    orig_pi3: np.ndarray,
+    orig_wt: np.ndarray,
+    n: int,
+    default_scale: bool = True,
+) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    Plot a scatter plot of the numerically evaluated coherence factor for a target dataset,
+    an original dataset and a weighted version of the original dataset.
+
+    Splits data into N chunks to get an idea of the statistical error involved
+
+    :param target_k: (4, N) numpy array of k (px, py, pz, E). Assumes K+
+    :param target_pi1: (4, N) numpy array of pi1 (px, py, pz, E). Assumes pi-
+    :param target_pi2: (4, N) numpy array of pi2 (px, py, pz, E). Assumes pi-
+    :param target_pi3: (4, N) numpy array of pi3 (px, py, pz, E). Assumes pi+
+    :param orig_k: (4, N) numpy array of k (px, py, pz, E). Assumes K+
+    :param orig_pi1: (4, N) numpy array of pi1 (px, py, pz, E). Assumes pi-
+    :param orig_pi2: (4, N) numpy array of pi2 (px, py, pz, E). Assumes pi-
+    :param orig_pi3: (4, N) numpy array of pi3 (px, py, pz, E). Assumes pi+
+    :param orig_wt: weights to apply to the original dataset
+    :param n: number of chunks to spit our arrays into
+    :param default_scale: whether to use matplotlib's default scaling (True), or to zoom out
+                          and plot both axes from -1 to +1
+    :returns: the figure used to plot on
+    :returns: the axis used to plot on
+
+    """
+
+    fig, ax = plt.subplots()
+
+    orig_points = _chunks_z(orig_k, orig_pi1, orig_pi2, orig_pi3, n)
+    target_points = _chunks_z(target_k, target_pi1, target_pi2, target_pi3, n)
+    reweighted_points = _chunks_z(orig_k, orig_pi1, orig_pi2, orig_pi3, n, orig_wt)
+
+    # Plot stuff
+    ax.plot([x[0] for x in orig_points], [x[1] for x in target_points], "+", color="r")
+    ax.plot(
+        [x[0] for x in target_points], [x[1] for x in target_points], "+", color="g"
+    )
+    ax.plot(
+        [x[0] for x in reweighted_points],
+        [x[1] for x in reweighted_points],
+        "+",
+        color="b",
+    )
+
+    # Plot hulls
+    _plot_hull(ax, orig_points, "r")
+    _plot_hull(ax, target_points, "g")
+    _plot_hull(ax, reweighted_points, "b")
+
+    if not default_scale:
+        ax.set_xlim(-1.0, 1.0)
+        ax.set_ylim(-1.0, 1.0)
+
+    ax.set_aspect("equal")
+
+    # Create legends for the axis
+    red_patch = mpatches.Patch(color="red", label="MC")
+    green_patch = mpatches.Patch(color="green", label="AmpGen")
+    blue_patch = mpatches.Patch(color="blue", label="Weighted")
+
+    ax.legend(handles=[red_patch, green_patch, blue_patch])
+
+    ax.yaxis.set_tick_params(rotation=90)
+
+    ax.set_xlabel(r"$Re(Z)$")
+    ax.set_ylabel(r"$Im(Z)$")
 
     return fig, ax
