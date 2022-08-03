@@ -94,7 +94,7 @@ def _pull(rng: np.random.Generator, n_gen: int) -> np.ndarray:
     pull = (true_params - fit_params) / fit_errs
 
     # Keeping this in in case I want to plot later for debug
-    if (np.abs(pull) > 10).any() and False:
+    if (np.abs(pull) > 10).any() or True:
 
         def fitted_pdf(x: np.ndarray) -> np.ndarray:
             return time_fitter.normalised_pdf(x, *fitter.values)[1]
@@ -151,7 +151,7 @@ def _plot_pulls(
     labels = ("t0", "n", "m", "a", "b", "k")
 
     for a, p, l in zip(ax.ravel(), pulls, labels):
-        a.hist(p, label=f"{np.mean(p):.4f}+-{np.std(p):.4f}", bins=20)
+        a.hist(p, label=f"{np.mean(p):.4f}+-{np.std(p):.4f}", bins=np.linspace(-10, 10, 21))
         a.set_title(l)
         a.legend()
 
@@ -169,8 +169,8 @@ def main():
 
     out_list = Manager().list()
 
-    n_procs = 6
-    n_experiments = 25
+    n_procs = 8
+    n_experiments = 15
     procs = [
         Process(
             target=_pull_study,
