@@ -1,11 +1,22 @@
-import sys
+"""
+Implementation for the efficiency reweighter
+
+"""
 from multiprocessing import Process, Manager
 import numpy as np
 import matplotlib.pyplot as plt
 from hep_ml.reweight import GBReweighter, BinsReweighter
 
+from lib_efficiency import time_fitter
+
 
 class TrainingError(Exception):
+    """
+    Useful because we might be multiprocessing; raise this if anything
+    went wrong in a child process
+
+    """
+
     def __init__(self):
         """
         Error training the BDT or something
@@ -14,6 +25,96 @@ class TrainingError(Exception):
         super().__init__(
             "Error training the BDT; see above for child process tracebacks"
         )
+
+
+class TimeFitReweighter:
+    """
+    Do the reweighting by performing a fit to decay times
+
+    Get the weights by assuming the true decay time distribution is
+    e^-t
+
+    """
+
+    def __init__(self):
+        """
+        List of attributes
+
+        """
+        self.fitter = None
+
+    def fit(self, original: np.ndarray, target: np.ndarray):
+        """
+        Perform the fit
+
+        :param original: times to fit to
+        :param target: unused parameter, included for consitency with the hep_ml
+                       reweighters
+
+        """
+        # These initial parameters seem to do the right thing, mostly
+        self.fitter = time_fitter.fit(original, (0.21, 1.0, 2.0, 1.0, 2.0, 1.0))
+
+    def _fitted_pdf(self, x: np.ndarray) -> np.ndarray:
+        """
+        Return (normalised) pdf values at each time passed in
+
+        """
+        assert hasattr(
+            self, "fitter"
+        ), "need to call .fit() before we have a fitted pdf"
+        return time_fitter.normalised_pdf(x, *self.fitter.values)[1]
+
+    def predict_weights(self, times: np.ndarray) -> np.ndarray:
+        """
+        Weights to correct for the efficiency
+
+        Returns 0 for times below the fitted minimum
+
+        """
+        return np.exp(-times) / self._fitted_pdf(times)
+
+
+class TimeWeighter:
+    """
+    The time reweighter
+
+    Or via a histogram division
+
+    Basically this class just holds either a BinsReweighter or TimeFitReweighter
+    object, and uses this to perform the time weighting
+
+    """
+
+    def __init__(self, min_t: float, fit: bool = False):
+        """
+        Tell us whether we're doing a fit to the decay times
+
+        :param min_t: time below which to set all weights to 0 anyway
+        :param fit: whether we want to reweight using the decay time fit
+                    or by using a BinsReweighter
+
+        """
+        self.min_t = min_t
+        self.fitter = TimeFitReweighter() if fit else BinsReweighter()
+
+    def fit(self, original: np.ndarray, target: np.ndarray):
+        """
+        Target arg is unused if we're doing a fit
+
+        """
+        self.fitter.fit(original, target)
+
+    def predict_weights(self, times):
+        """
+        Predict weights to correct for the efficiency
+
+        """
+        above_min = times > self.min_t
+        retval = np.zeros_like(times)
+        retval[above_min] = self.fitter.predict_weights(times[above_min])
+
+        return retval
 
 
 class Efficiency_Weighter:
@@ -43,7 +144,6 @@ class Efficiency_Weighter:
             # n_estimators=10
         )
 
-        # TODO if we do the weighting the other way, need to weight the target not the original
         self._phsp_weighter.fit(
             original=original,
             target=target,
@@ -127,7 +227,8 @@ class Binned_Reweighter:
         """
         Using the provided time bins, create an Efficiency_Weighter in each
 
-        Bins should cover the entire range of interest - from min time (leftmost edge) to the max time (rightmost edge)
+        Bins should cover the entire range of interest - from min time (leftmost edge)
+        to the max time (rightmost edge)
 
         """
         self._mc_points = mc_points

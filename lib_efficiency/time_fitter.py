@@ -76,12 +76,13 @@ def fit(
 
     m = Minuit(nll, *initial_guess)
 
-    m.limits["t0"] = (0.0, None)
     m.limits["n"] = (0.5, 3.0)
     m.limits["m"] = (0.1, 3.0)
     m.limits["a"] = (0.1, 2.0)
     m.limits["b"] = (0.5, 3.0)
     m.limits["k"] = (0.9, 1.2)
+
+    m.fixed["t0"] = True
 
     m.migrad()
 

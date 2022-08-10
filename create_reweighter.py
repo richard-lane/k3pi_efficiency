@@ -11,9 +11,10 @@ from fourbody.param import helicity_param
 from lib_efficiency import efficiency_definitions, efficiency_util
 from lib_efficiency.reweighter import Binned_Reweighter
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
 
-from lib_cuts.read_data import momentum_order
+from lib_data import get
+from lib_data.util import momentum_order
 
 
 def main(year: str, sign: str, magnetisation: str):
@@ -23,15 +24,15 @@ def main(year: str, sign: str, magnetisation: str):
     """
     # Read the right stuff
     ag_df = efficiency_util.ampgen_dump(sign)
-    mc_df = efficiency_util.mc_dump(year, sign, magnetisation)
+    pgun_df = efficiency_util.mc_dump(year, sign, magnetisation)
 
     # We only want to train on training data
     ag_df = ag_df[ag_df["train"]]
-    mc_df = mc_df[mc_df["train"]]
+    pgun_df = pgun_df[pgun_df["train"]]
 
     # Get the right arrays
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ag_df)
-    mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(mc_df)
+    mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
 
     # Momentum order
     ag_pi1, ag_pi2 = momentum_order(ag_k, ag_pi1, ag_pi2)
