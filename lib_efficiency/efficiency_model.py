@@ -12,9 +12,9 @@ from fourbody.param import helicity_param
 from . import efficiency_definitions
 from .reweighter import Binned_Reweighter
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
-from lib_cuts.read_data import momentum_order
+from lib_data import util
 
 
 def weights(
@@ -23,6 +23,7 @@ def weights(
     pi2: np.ndarray,
     pi3: np.ndarray,
     t: np.ndarray,
+    k_id: np.ndarray,
     year: str,
     sign: str,
     magnetisation: str,
@@ -41,6 +42,8 @@ def weights(
     :param pi3: 2d numpy array of pi3 data (pi3_px, pi3_py, pi3_pz, pi3_e) in GeV. Shape (4, N).
                 This pion has the same charge as the kaon.
     :param t: 1d numpy arrays of decay times in lifetimes.
+    :param k_id: particle id of the kaon: -321 for K-, 321 for K+. This is used to flip the sign
+                 of the particles' 3 momenta.
     :param year: data taking year.
     :param sign: either "RS" or "WS"
     :param magnetisation: either "MagUp" or "MagDown"
@@ -63,6 +66,9 @@ def weights(
             f"({efficiency_definitions.MIN_TIME})"
         )
 
+    # Flip signs of the particles where necessary
+    k, pi1, pi2, pi3 = util.convert_to_kplus(k, pi1, pi2, pi3, k_id)
+
     # Find the right reweighter to unpickle
     reweighter_path = efficiency_definitions.reweighter_path(
         year, sign, magnetisation, fit
@@ -75,7 +81,7 @@ def weights(
         reweighter: Binned_Reweighter = pickle.load(f)
 
     # Momentum order
-    pi1, pi2 = momentum_order(k, pi1, pi2)
+    pi1, pi2 = util.momentum_order(k, pi1, pi2)
 
     # Parameterise event into 5+1d space
     parameterised_evts = np.column_stack(

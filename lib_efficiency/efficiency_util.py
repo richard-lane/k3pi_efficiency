@@ -40,10 +40,7 @@ def efficiency_df(dataframe: pd.DataFrame) -> pd.DataFrame:
     :returns: copy of the dataframe with only the momentum and time columns
 
     """
-    keep_columns = [*definitions.MOMENTUM_COLUMNS, "time"]
-    df_slice = dataframe[keep_columns + ["K ID"]]
+    keep_columns = [*definitions.MOMENTUM_COLUMNS, "time", "K ID"]
+    df_slice = dataframe[keep_columns]
 
-    # It's possible that this doesn't actually free up the memory
-    # used for the "K ID" column, but hopefully it does and it's
-    # probably not that important anyway
-    return util.flip_momenta(df_slice)[keep_columns]
+    return util.flip_momenta(df_slice)

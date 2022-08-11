@@ -34,6 +34,9 @@ def main(year: str, sign: str, magnetisation: str, fit: bool):
     ag_df = ag_df[ag_df["train"]]
     pgun_df = pgun_df[pgun_df["train"]]
 
+    # We want to swap the 3 momentum of any K- type particle gun candidate
+    pgun_df = efficiency_util.efficiency_df(pgun_df)
+
     # Get the right arrays
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ag_df)
     mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
