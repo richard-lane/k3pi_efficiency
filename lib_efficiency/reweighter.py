@@ -31,6 +31,10 @@ class TimeFitReweighter:
     """
     Do the reweighting by performing a fit to decay times
 
+    Does the reweighting AmpGen -> MC (i.e. the weights here apply the
+    efficiency, they don't correct for it) - this is because this seems
+    to be more stable
+
     Get the weights by assuming the true decay time distribution is
     e^-t
 
@@ -43,36 +47,34 @@ class TimeFitReweighter:
         """
         self.fitter = None
 
-    def fit(self, original: np.ndarray, target: np.ndarray):
+    def fit(self, _, times: np.ndarray):
         """
         Perform the fit
 
-        :param original: times to fit to
-        :param target: unused parameter, included for consitency with the hep_ml
-                       reweighters
+        Dummy var for API consistency with BinsReweighter.fit
 
         """
         # These initial parameters seem to do the right thing, mostly
-        self.fitter = time_fitter.fit(original, (0.21, 1.0, 2.0, 1.0, 2.0, 1.0))
+        self.fitter = time_fitter.fit(times, (0.21, 1.0, 2.0, 1.0, 2.0, 1.0))
 
     def _fitted_pdf(self, x: np.ndarray) -> np.ndarray:
         """
         Return (normalised) pdf values at each time passed in
 
         """
-        assert hasattr(
-            self, "fitter"
+        assert (
+            self.fitter is not None
         ), "need to call .fit() before we have a fitted pdf"
         return time_fitter.normalised_pdf(x, *self.fitter.values)[1]
 
     def predict_weights(self, times: np.ndarray) -> np.ndarray:
         """
-        Weights to correct for the efficiency
+        Weights to apply the efficiency
 
         Returns 0 for times below the fitted minimum
 
         """
-        return np.exp(-times) / self._fitted_pdf(times)
+        return self._fitted_pdf(times) / np.exp(-times)
 
 
 class TimeWeighter:
@@ -96,14 +98,30 @@ class TimeWeighter:
 
         """
         self.min_t = min_t
-        self.fitter = TimeFitReweighter() if fit else BinsReweighter()
+        self.fitter = (
+            TimeFitReweighter() if fit else BinsReweighter(n_bins=20000, n_neighs=10)
+        )
 
-    def fit(self, original: np.ndarray, target: np.ndarray):
+    def fit(self, mc_times: np.ndarray, ampgen_times: np.ndarray):
         """
-        Target arg is unused if we're doing a fit
+        ampgen times arg is unused if we're doing a fit
 
         """
-        self.fitter.fit(original, target)
+        # Reweight AmpGen to MC to avoid getting huge weights
+        # If we're doing a histogram division, only use times above the minimum
+        if isinstance(self.fitter, BinsReweighter):
+            ag_t = ampgen_times[ampgen_times > self.min_t]
+            mc_t = mc_times[mc_times > self.min_t]
+            print(
+                f"{self.fitter.n_bins} bins\n"
+                f"{len(ag_t)}, {len(mc_t)} times above minimum.\n"
+                f"Avg of {len(ag_t) / self.fitter.n_bins}, "
+                f"{len(mc_t) / self.fitter.n_bins} per bin"
+            )
+            self.fitter.fit(ag_t, mc_t)
+        # If we're fitting fit all the times; not just the ones above the min time
+        else:
+            self.fitter.fit(ampgen_times, mc_times)
 
     def predict_weights(self, times):
         """
@@ -112,7 +130,7 @@ class TimeWeighter:
         """
         above_min = times > self.min_t
         retval = np.zeros_like(times)
-        retval[above_min] = self.fitter.predict_weights(times[above_min])
+        retval[above_min] = 1 / self.fitter.predict_weights(times[above_min])
 
         return retval
 

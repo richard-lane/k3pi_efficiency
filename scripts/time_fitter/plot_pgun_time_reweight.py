@@ -45,7 +45,7 @@ def main(sign: str):
     hist_kw = {"density": True, "bins": np.linspace(0.0, 8, 100)}
 
     for weighter, axis, title in zip(reweighters, ax, ("Histogram", "fit")):
-        weighter.fit(original=pgun_train, target=ampgen_train)
+        weighter.fit(pgun_train, ampgen_train)
         axis.hist(
             pgun_test[pgun_test > min_t], **hist_kw, label="before", histtype="step"
         )
@@ -64,6 +64,11 @@ def main(sign: str):
         )
 
         axis.set_title(title)
+
+    pts = np.linspace(0, 8)
+    pdf = reweighters[1].fitter._fitted_pdf(pts)
+    plt.plot(pts, pdf)
+    plt.show()
 
     ax[1].legend()
     fig.suptitle(f"Particle Gun {sign} Reweighting")
