@@ -19,12 +19,12 @@ def reweighter_path(
     """
     # TODO the rest of these
     assert year in {"2018"}
-    assert sign in {"RS", "WS"}
+    assert sign in {"cf", "dcs"}
     assert magnetisation in {"magdown"}
 
-    time_suffix = "time_fit" if time_fit else ""
+    time_suffix = "_time_fit" if time_fit else ""
 
-    return REWEIGHTER_DIR / f"{year}_{sign}_{magnetisation}_{time_suffix}.pkl"
+    return REWEIGHTER_DIR / f"{year}_{sign}_{magnetisation}{time_suffix}.pkl"
 
 
 def reweighter_exists(

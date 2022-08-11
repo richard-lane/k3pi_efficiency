@@ -45,7 +45,7 @@ class TimeFitReweighter:
         List of attributes
 
         """
-        self.fitter = None
+        self.fit_vals = None
 
     def fit(self, _, times: np.ndarray):
         """
@@ -55,7 +55,11 @@ class TimeFitReweighter:
 
         """
         # These initial parameters seem to do the right thing, mostly
-        self.fitter = time_fitter.fit(times, (0.21, 1.0, 2.0, 1.0, 2.0, 1.0))
+        # We can't store the fitter as an attribute since it's unserialisable
+        fitter = time_fitter.fit(times, (0.21, 1.0, 2.0, 1.0, 2.0, 1.0))
+
+        # We can however store the fit parameters
+        self.fit_vals = np.array(fitter.values)
 
     def _fitted_pdf(self, x: np.ndarray) -> np.ndarray:
         """
@@ -63,9 +67,10 @@ class TimeFitReweighter:
 
         """
         assert (
-            self.fitter is not None
+            self.fit_vals is not None
         ), "need to call .fit() before we have a fitted pdf"
-        return time_fitter.normalised_pdf(x, *self.fitter.values)[1]
+
+        return time_fitter.normalised_pdf(x, *self.fit_vals)[1]
 
     def predict_weights(self, times: np.ndarray) -> np.ndarray:
         """
@@ -121,7 +126,11 @@ class TimeWeighter:
             self.fitter.fit(ag_t, mc_t)
         # If we're fitting fit all the times; not just the ones above the min time
         else:
-            self.fitter.fit(ampgen_times, mc_times)
+            print(
+                f"Performing fit to {len(mc_times):,} times from "
+                f"{np.min(mc_times):.4f} to {np.max(mc_times):.4f}"
+            )
+            self.fitter.fit(None, mc_times)
 
     def apply_efficiency(self, times):
         """
