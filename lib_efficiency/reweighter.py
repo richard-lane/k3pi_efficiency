@@ -176,15 +176,18 @@ class EfficiencyWeighter:
         :param fit: whether to find the decay time efficiency by performing a fit. Does a histogram
                     division if False.
         :param min_t: minimum time, below which weights are set to 0.
-                      The histogram division only considers times above this, but the fit fits to all
-                      times.
+                      The histogram division only considers times above this, but the fit fits to
+                      all times.
 
         """
         self._time_weighter = TimeWeighter(min_t, fit)
         self._time_weighter.fit(original[:, 5], target[:, 5])
 
         self._phsp_weighter = GBReweighter(
-            # n_estimators=650, max_depth=6, learning_rate=0.2, min_samples_leaf=800
+            n_estimators=650,
+            max_depth=6,
+            learning_rate=0.2,
+            min_samples_leaf=800
             # n_estimators=10
         )
 
