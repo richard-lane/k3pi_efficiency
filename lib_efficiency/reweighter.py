@@ -88,7 +88,7 @@ class TimeWeighter:
 
     """
 
-    def __init__(self, min_t: float, fit: bool = False):
+    def __init__(self, min_t: float, fit: bool):
         """
         Tell us whether we're doing a fit to the decay times
 
@@ -123,9 +123,20 @@ class TimeWeighter:
         else:
             self.fitter.fit(ampgen_times, mc_times)
 
-    def predict_weights(self, times):
+    def apply_efficiency(self, times):
         """
-        Predict weights to correct for the efficiency
+        Predict weights to apply the efficiency
+
+        """
+        above_min = times > self.min_t
+        retval = np.zeros_like(times)
+        retval[above_min] = self.fitter.predict_weights(times[above_min])
+
+        return retval
+
+    def correct_efficiency(self, times):
+        """
+        Weights to correct for the efficiency
 
         """
         above_min = times > self.min_t
@@ -135,37 +146,44 @@ class TimeWeighter:
         return retval
 
 
-class Efficiency_Weighter:
+class EfficiencyWeighter:
     """
-    Holds a 5d BDT and information about the decay times
-
-    Used for approximating the efficiency
+    Holds a time reweighter that either does a histogram division or a fit to the decay times
+    Holds also a BDT reweighter that deals with the phsp efficiency, but uses the time reweighter
+    to keep the correlations between time and phase space
 
     """
 
-    def __init__(self, target: np.ndarray, original: np.ndarray):
+    def __init__(
+        self, target: np.ndarray, original: np.ndarray, fit: bool, min_t: float
+    ):
         """
-        Train BDT, perform histogram division to set all the class members
+        Perform time weighting and train the BDT
 
-        First performs histogram division, then trains BDT to reweight mc -> AmpGen * e(t)
+        First finds the decay time efficiency e(t), then trains BDT to reweight mc -> AmpGen * e(t)
 
         :param target: shape (N, 6) array of phsp points; 6th element of each should be decay time
         :param original: shape (N, 6) array of phsp points; 6th element of each should be decay time
+        :param fit: whether to find the decay time efficiency by performing a fit. Does a histogram
+                    division if False.
+        :param min_t: minimum time, below which weights are set to 0.
+                      The histogram division only considers times above this, but the fit fits to all
+                      times.
 
         """
-        self._time_weighter = BinsReweighter()
-        # This is a bit strange - we're reweighting AmpGen -> MC to avoid getting really big weights
-        self._time_weighter.fit(target=original[:, 5], original=target[:, 5])
+        self._time_weighter = TimeWeighter(min_t, fit)
+        self._time_weighter.fit(original[:, 5], target[:, 5])
 
         self._phsp_weighter = GBReweighter(
             # n_estimators=650, max_depth=6, learning_rate=0.2, min_samples_leaf=800
             # n_estimators=10
         )
 
+        # Weight original -> target, but weight the target such that
         self._phsp_weighter.fit(
             original=original,
             target=target,
-            target_weight=self._time_weighter.predict_weights(target[:, 5]),
+            target_weight=self._time_weighter.apply_efficiency(target[:, 5]),
         )
 
     def time_weights(self, times: np.ndarray) -> np.ndarray:
@@ -173,7 +191,7 @@ class Efficiency_Weighter:
         Find weights to take mc -> AmpGen
 
         """
-        return 1 / self._time_weighter.predict_weights(times)
+        return self._time_weighter.correct_efficiency(times)
 
     def phsp_weights(self, phsp_points: np.ndarray) -> np.ndarray:
         """

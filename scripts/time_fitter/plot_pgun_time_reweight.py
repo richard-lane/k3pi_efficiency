@@ -59,7 +59,7 @@ def main(sign: str):
             pgun_test,
             **hist_kw,
             label="after",
-            weights=weighter.predict_weights(pgun_test),
+            weights=weighter.correct_efficiency(pgun_test),
             alpha=0.5,
         )
 
