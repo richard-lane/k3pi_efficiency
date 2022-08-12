@@ -10,12 +10,12 @@ import argparse
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
-from fourbody.param import helicity_param
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-from lib_cuts.read_data import momentum_order
+from lib_data import get, util
+
 from lib_efficiency import (
     efficiency_util,
     plotting,
@@ -25,27 +25,49 @@ from lib_efficiency import (
 
 
 def _times_and_weights(
-    year: str, magnetisation: str, sign: str
+    year: str,
+    magnetisation: str,
+    sign: str,
+    data_sign: str,
+    weighter_sign: str,
+    fit: bool,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Get testing times and weights
 
     """
-    ampgen_df = efficiency_util.ampgen_dump(sign)
-    mc_df = efficiency_util.mc_dump(year, sign, magnetisation)
+    ampgen_df = get.ampgen(sign)
+    pgun_df = get.particle_gun(sign, show_progress=True)
 
     # We only want test data here
+    pgun_df = efficiency_util.efficiency_df(pgun_df[~pgun_df["train"]])
     ampgen_df = ampgen_df[~ampgen_df["train"]]
-    mc_df = mc_df[~mc_df["train"]]
+
+    # Deal with getting rid of evts/flipping momenta if we need to
+    pgun_df = efficiency_util.k_sign_cut(pgun_df, data_sign)
+    if data_sign == "k_minus":
+        ampgen_df = util.flip_momenta(
+            ampgen_df, np.ones(len(ampgen_df), dtype=np.bool_)
+        )
 
     # Just pass the arrays into the efficiency function and it should find the right weights
-    ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
-    mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(mc_df)
+    mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
 
-    ag_t, mc_t = ampgen_df["time"], mc_df["time"]
+    ag_t, mc_t = ampgen_df["time"], pgun_df["time"]
 
+    # Open the reweighter according to weighter_sign
     weights = efficiency_model.weights(
-        mc_k, mc_pi1, mc_pi2, mc_pi3, mc_t, year, sign, magnetisation, verbose=True
+        mc_k,
+        mc_pi1,
+        mc_pi2,
+        mc_pi3,
+        mc_t,
+        weighter_sign,
+        year,
+        sign,
+        magnetisation,
+        fit,
+        verbose=True,
     )
 
     return ag_t, mc_t, weights
@@ -60,28 +82,32 @@ def _allowed_times(
     return times[mask], wt[mask]
 
 
-def main(year, magnetisation):
+def main(year: str, magnetisation: str, data_sign: str, weighter_sign: str, fit: bool):
     """
     Create a plot
 
     """
     bins = np.array(
         [
-            0.3854,
-            0.48585,
-            0.574,
-            0.6642,
-            0.7585,
-            0.8733,
-            1.0045,
-            1.1767,
-            1.435,
-            3.28,
-            7.7899,
+            efficiency_definitions.MIN_TIME,
+            1.0,
+            1.2,
+            1.35,
+            1.5,
+            1.7,
+            2.0,
+            2.4,
+            2.8,
+            6.0,
+            10.0,
         ]
     )
-    rs_ag_t, rs_mc_t, rs_wt = _times_and_weights(year, magnetisation, "RS")
-    ws_ag_t, ws_mc_t, ws_wt = _times_and_weights(year, magnetisation, "WS")
+    rs_ag_t, rs_mc_t, rs_wt = _times_and_weights(
+        year, magnetisation, "cf", data_sign, weighter_sign, fit
+    )
+    ws_ag_t, ws_mc_t, ws_wt = _times_and_weights(
+        year, magnetisation, "dcs", data_sign, weighter_sign, fit
+    )
 
     # Keep only times in the allowed range
     rs_ag_t = _allowed_times(rs_ag_t, bins[0], bins[-1])
@@ -91,6 +117,11 @@ def main(year, magnetisation):
     ws_mc_t, ws_wt = _allowed_times(ws_mc_t, bins[0], bins[-1], ws_wt)
 
     plotting.plot_ratios(rs_mc_t, ws_mc_t, rs_ag_t, ws_ag_t, rs_wt, ws_wt, bins)
+
+    fit_suffix = "_fit" if fit else ""
+    plt.savefig(
+        f"ratio_{year}_{magnetisation}_data_{data_sign}_weighter_{weighter_sign}{fit_suffix}.png"
+    )
 
     plt.show()
 
@@ -102,5 +133,19 @@ if __name__ == "__main__":
     parser.add_argument("year", type=str, choices={"2018"})
     parser.add_argument("magnetisation", type=str, choices={"magdown"})
 
+    parser.add_argument(
+        "data_sign",
+        type=str,
+        choices={"k_plus", "k_minus"},
+        help="whether to read K+ or K- data",
+    )
+    parser.add_argument(
+        "weighter_sign",
+        type=str,
+        choices={"k_plus", "k_minus"},
+        help="whether to open the reweighter trained on K+ or K-",
+    )
+    parser.add_argument("--fit", action="store_true")
+
     args = parser.parse_args()
-    main(args.year, args.magnetisation)
+    main(args.year, args.magnetisation, args.data_sign, args.weighter_sign, args.fit)
