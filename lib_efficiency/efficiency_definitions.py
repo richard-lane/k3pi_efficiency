@@ -6,8 +6,9 @@ import pathlib
 
 REWEIGHTER_DIR = pathlib.Path(__file__).resolve().parents[1] / "reweighter"
 
-# Time below which we just throw away events - the reweighting here is too unstable
-MIN_TIME = 0.3
+# Time (in lifetimes) below which we just throw away events - the reweighting here is too
+# unstable
+MIN_TIME = 0.5
 
 
 def reweighter_path(
