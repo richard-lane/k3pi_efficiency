@@ -23,7 +23,7 @@ def weights(
     pi2: np.ndarray,
     pi3: np.ndarray,
     t: np.ndarray,
-    k_id: np.ndarray,
+    k_sign: str,
     year: str,
     sign: str,
     magnetisation: str,
@@ -42,6 +42,7 @@ def weights(
     :param pi3: 2d numpy array of pi3 data (pi3_px, pi3_py, pi3_pz, pi3_e) in GeV. Shape (4, N).
                 This pion has the same charge as the kaon.
     :param t: 1d numpy arrays of decay times in lifetimes.
+    :param k_sign: "k_plus" or "k_minus"
     :param k_id: particle id of the kaon: -321 for K-, 321 for K+. This is used to flip the sign
                  of the particles' 3 momenta.
     :param year: data taking year.
@@ -54,11 +55,13 @@ def weights(
     :returns: length-N array of weights
 
     """
-    assert efficiency_definitions.reweighter_exists(year, sign, magnetisation, fit)
+    assert efficiency_definitions.reweighter_exists(
+        year, sign, magnetisation, k_sign, fit
+    )
 
     if verbose:
         print(
-            f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}"
+            f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}\t{k_sign}"
             f"\n\tN:\t{len(k.T)}"
         )
         print(
@@ -66,12 +69,13 @@ def weights(
             f"({efficiency_definitions.MIN_TIME})"
         )
 
-    # Flip signs of the particles where necessary
-    k, pi1, pi2, pi3 = util.convert_to_kplus(k, pi1, pi2, pi3, k_id)
-
     # Find the right reweighter to unpickle
     reweighter_path = efficiency_definitions.reweighter_path(
-        year, sign, magnetisation, fit
+        year,
+        sign,
+        magnetisation,
+        k_sign,
+        fit,
     )
 
     # Open the reweighter

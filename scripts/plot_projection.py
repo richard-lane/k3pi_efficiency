@@ -23,7 +23,7 @@ from lib_efficiency import (
 )
 
 
-def main(year: str, sign: str, magnetisation: str, fit: bool):
+def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
     """
     Create a plot
 
@@ -34,6 +34,13 @@ def main(year: str, sign: str, magnetisation: str, fit: bool):
     # We only want test data here
     pgun_df = efficiency_util.efficiency_df(pgun_df[~pgun_df["train"]])
     ampgen_df = ampgen_df[~ampgen_df["train"]]
+
+    # Deal with getting rid of evts/flipping momenta if we need to
+    pgun_df = efficiency_util.k_sign_cut(pgun_df, k_sign)
+    if k_sign == "k_minus":
+        ampgen_df = util.flip_momenta(
+            ampgen_df, np.ones(len(ampgen_df), dtype=np.bool_)
+        )
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
@@ -47,7 +54,7 @@ def main(year: str, sign: str, magnetisation: str, fit: bool):
         mc_pi2,
         mc_pi3,
         mc_t,
-        pgun_df["K ID"],
+        k_sign,
         year,
         sign,
         magnetisation,
@@ -76,7 +83,13 @@ if __name__ == "__main__":
     parser.add_argument("year", type=str, choices={"2018"})
     parser.add_argument("sign", type=str, choices={"cf", "dcs"})
     parser.add_argument("magnetisation", type=str, choices={"magdown"})
+    parser.add_argument(
+        "k_sign",
+        type=str,
+        choices={"k_plus", "k_minus"},
+        help="Whether to create a reweighter for K+ or K- type evts",
+    )
     parser.add_argument("--fit", action="store_true")
 
     args = parser.parse_args()
-    main(args.year, args.sign, args.magnetisation, args.fit)
+    main(args.year, args.sign, args.magnetisation, args.k_sign, args.fit)

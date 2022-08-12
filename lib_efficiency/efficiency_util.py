@@ -44,3 +44,16 @@ def efficiency_df(dataframe: pd.DataFrame) -> pd.DataFrame:
     df_slice = dataframe[keep_columns]
 
     return util.flip_momenta(df_slice)
+
+
+def k_sign_cut(dataframe: pd.DataFrame, k_sign: str):
+    """
+    Choose the right kaons - modifies the dataframe in place
+
+    """
+    assert k_sign in {"k_minus", "k_plus"}
+
+    k_ids = dataframe["K ID"].to_numpy()
+    drop = k_ids > 0 if k_sign == "k_minus" else k_ids < 0
+
+    return dataframe[~drop]
