@@ -40,7 +40,7 @@ def _times_and_weights(
     pgun_df = get.particle_gun(sign, show_progress=True)
 
     # We only want test data here
-    pgun_df = efficiency_util.efficiency_df(pgun_df[~pgun_df["train"]])
+    pgun_df = pgun_df[~pgun_df["train"]]
     ampgen_df = ampgen_df[~ampgen_df["train"]]
 
     # Deal with getting rid of evts/flipping momenta if we need to

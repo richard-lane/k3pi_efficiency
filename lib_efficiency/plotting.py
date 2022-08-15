@@ -118,6 +118,11 @@ def _plot_ratio(
     num_counts, num_errs = _counts(numerator, num_wt, bins)
     denom_counts, denom_errs = _counts(denominator, denom_wt, bins)
 
+    # Scale
+    scale_factor = np.sum(num_counts) / np.sum(denom_counts)
+    denom_counts *= scale_factor
+    denom_errs *= scale_factor
+
     ratio = num_counts / denom_counts
     err = ratio * np.sqrt(
         (num_errs / num_counts) ** 2 + (denom_errs / denom_counts) ** 2
