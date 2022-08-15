@@ -163,7 +163,7 @@ def _plot_ratio(
 
     # Find chi2
     n_dof = (len(bins) - 1) - 2  # n_bins - 2 since we have 2 fit params
-    return np.sum(((ratio - best_fit(centres)) ** 2) / (n_dof * err))
+    return np.sum(((ratio - best_fit(centres)) ** 2) / (n_dof * err ** 2))
 
 
 def plot_ratios(
