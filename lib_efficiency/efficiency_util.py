@@ -40,6 +40,8 @@ def efficiency_df(dataframe: pd.DataFrame) -> pd.DataFrame:
     :returns: copy of the dataframe with only the momentum and time columns
 
     """
+    # TODO remove
+    assert False, "use k_sign_cut instead"
     keep_columns = [*definitions.MOMENTUM_COLUMNS, "time", "K ID"]
     df_slice = dataframe[keep_columns]
 
@@ -54,6 +56,8 @@ def k_sign_cut(dataframe: pd.DataFrame, k_sign: str):
     assert k_sign in {"k_minus", "k_plus"}
 
     k_ids = dataframe["K ID"].to_numpy()
-    drop = k_ids > 0 if k_sign == "k_minus" else k_ids < 0
+    keep = k_ids < 0 if k_sign == "k_minus" else k_ids > 0
 
-    return dataframe[~drop]
+    print(f"k sign cut: keeping {np.sum(keep)} of {len(keep)}")
+
+    return dataframe[keep]

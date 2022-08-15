@@ -61,7 +61,7 @@ def weights(
 
     if verbose:
         print(
-            f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}\t{k_sign}"
+            f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}\n\t{k_sign=}"
             f"\n\tN:\t{len(k.T)}"
         )
         print(
