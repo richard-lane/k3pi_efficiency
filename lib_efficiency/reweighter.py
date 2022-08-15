@@ -210,7 +210,11 @@ class EfficiencyWeighter:
         return self._phsp_weighter.predict_weights(phsp_points)
 
     def weights(self, points):
-        return self.phsp_weights(points) * self.time_weights(points[:, 5])
+        """
+        Normalised to have a mean of 1.0
+        """
+        retval = self.phsp_weights(points) * self.time_weights(points[:, 5])
+        return retval / np.mean(retval)
 
 
 class Binned_Reweighter:
