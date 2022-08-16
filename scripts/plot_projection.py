@@ -35,11 +35,16 @@ def main(
     Create a plot
 
     """
-    ampgen_df = get.ampgen(sign)
-    pgun_df = get.particle_gun(sign, show_progress=True)
+    ag_sign = "dcs" if sign == "false" else sign
+    ampgen_df = get.ampgen(ag_sign)
+    if sign == "false":
+        pgun_df = get.false_sign(show_progress=True)
+    else:
+        pgun_df = get.particle_gun(sign, show_progress=True)
 
-    # We only want test data here
-    pgun_df = pgun_df[~pgun_df["train"]]
+        # We only want test data here
+        pgun_df = pgun_df[~pgun_df["train"]]
+
     ampgen_df = ampgen_df[~ampgen_df["train"]]
 
     # Deal with getting rid of evts/flipping momenta if we need to
@@ -63,7 +68,7 @@ def main(
         mc_t,
         weighter_sign,
         year,
-        sign,
+        ag_sign,  # WS reweighter for false sign
         magnetisation,
         fit,
         verbose=True,
@@ -95,7 +100,12 @@ if __name__ == "__main__":
         description="Make plots of ampgen + MC phase space variables, and do the reweighting."
     )
     parser.add_argument("year", type=str, choices={"2018"})
-    parser.add_argument("sign", type=str, choices={"cf", "dcs"})
+    parser.add_argument(
+        "sign",
+        type=str,
+        choices={"cf", "dcs", "false"},
+        help="CF, DCS or false sign (WS amplitude but RS charges)",
+    )
     parser.add_argument("magnetisation", type=str, choices={"magdown"})
     parser.add_argument(
         "data_sign",

@@ -184,14 +184,15 @@ class EfficiencyWeighter:
         self._time_weighter.fit(original[:, 5], target[:, 5])
 
         self._phsp_weighter = GBReweighter(
-            n_estimators=650,
-            max_depth=5,
-            learning_rate=0.2,
-            min_samples_leaf=800
+            # n_estimators=650,
+            # max_depth=5,
+            # learning_rate=0.2,
+            # min_samples_leaf=800
             # n_estimators=10
         )
 
-        # Weight original -> target, but weight the target such that
+        # Overall we will eight original -> target
+        # but here weight the target such that it looks like original to prevent huge weights
         self._phsp_weighter.fit(
             original=original,
             target=target,
