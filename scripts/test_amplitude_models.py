@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
-from lib_cuts.read_data import momentum_order
+from lib_data import get, util
 from lib_efficiency.amplitude_models import amplitudes
 from lib_efficiency import efficiency_util
 
@@ -25,15 +25,12 @@ def main():
     and plot
 
     """
-    ws_df = efficiency_util.ampgen_dump("WS")
-    rs_df = efficiency_util.ampgen_dump("RS")
+    ws_df = get.ampgen("dcs")
+    rs_df = get.ampgen("cf")
 
     # tuple of (k, pi1, pi2, pi3) for each
     ws_k, ws_pi1, ws_pi2, ws_pi3 = efficiency_util.k_3pi(ws_df)
     rs_k, rs_pi1, rs_pi2, rs_pi3 = efficiency_util.k_3pi(rs_df)
-
-    ws_pi1, ws_pi2 = momentum_order(ws_k, ws_pi1, ws_pi2)
-    rs_pi1, rs_pi2 = momentum_order(rs_k, rs_pi1, rs_pi2)
 
     # Kaon charge is +1
     ws_amp = amplitudes.dcs_amplitudes(ws_k, ws_pi1, ws_pi2, ws_pi3, +1)
@@ -44,6 +41,9 @@ def main():
 
     ws_weights /= np.mean(ws_weights)
     rs_weights /= np.mean(rs_weights)
+
+    ws_pi1, ws_pi2 = util.momentum_order(ws_k, ws_pi1, ws_pi2)
+    rs_pi1, rs_pi2 = util.momentum_order(rs_k, rs_pi1, rs_pi2)
 
     ws = np.column_stack((helicity_param(ws_k, ws_pi1, ws_pi2, ws_pi3), ws_df["time"]))
     rs = np.column_stack((helicity_param(rs_k, rs_pi1, rs_pi2, rs_pi3), rs_df["time"]))

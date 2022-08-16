@@ -188,7 +188,7 @@ def plot_ratios(
 
     ax[0].set_ylabel(r"$\frac{WS}{RS}$ ratio")
     for a in ax:
-        a.set_xlabel("t/ ps")
+        a.set_xlabel(r"t/$\tau$")
     ax[2].text(0.2, 0.92, "Errors are approximate")
 
     fig.tight_layout()

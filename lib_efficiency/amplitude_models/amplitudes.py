@@ -67,6 +67,10 @@ def _amplitudes(
 
     """
     assert sign in {"cf", "dcs"}
+    assert k.dtype == np.float64
+    assert pi1.dtype == np.float64
+    assert pi2.dtype == np.float64
+    assert pi3.dtype == np.float64
 
     # Get fcn from DLL
     path = str(_dcs_path()) if sign == "dcs" else str(_cf_path())
