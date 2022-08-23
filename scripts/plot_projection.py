@@ -13,54 +13,26 @@ from fourbody.param import helicity_param
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 
-from lib_data import get, util
+import common
+from lib_data import util
 from lib_efficiency import (
     efficiency_util,
     plotting,
     efficiency_model,
     efficiency_definitions,
-    metrics,
 )
 
 
-def main(
-    year: str,
-    sign: str,
-    magnetisation: str,
-    data_sign: str,
-    weighter_sign: str,
-    fit: bool,
-):
+def main(args: argparse.Namespace):
     """
     Create a plot
 
     """
-    ag_sign = "dcs" if sign == "false" else sign
-    ampgen_df = get.ampgen(ag_sign)
-    if sign == "false":
-        pgun_df = get.false_sign(show_progress=True)
-
-        # We need to flip the momenta of K+ events I think
-        # since maybe our phase space is folded over in some different way
-        # TODO instead of flipping these momenta, we should
-        # cut out the wrong ones
-        pgun_df = util.flip_momenta(pgun_df, pgun_df["K ID"] > 0)
-
-    else:
-        pgun_df = get.particle_gun(sign, show_progress=True)
-        # We only want test data here
-        pgun_df = pgun_df[~pgun_df["train"]]
-
-    # Deal with getting rid of evts/flipping momenta if we need to
-    pgun_df = efficiency_util.k_sign_cut(pgun_df, data_sign)
-
-    # Flip ampgen sign if we need to
-    ampgen_df = ampgen_df[~ampgen_df["train"]]
-    if data_sign == "k_minus":
-        ampgen_df = util.flip_momenta(
-            ampgen_df, np.ones(len(ampgen_df), dtype=np.bool_)
-        )
+    pgun_df = common.pgun_df(args.data_sign, args.data_k_sign)
+    ag_sign = "dcs" if args.data_sign == "false" else sign
+    ampgen_df = common.ampgen_df(ag_sign, args.data_k_sign)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
@@ -74,11 +46,11 @@ def main(
         mc_pi2,
         mc_pi3,
         mc_t,
-        weighter_sign,
-        year,
-        ag_sign,  # WS reweighter for false sign
-        magnetisation,
-        fit,
+        args.weighter_k_sign,
+        args.year,
+        args.weighter_sign,
+        args.magnetisation,
+        args.fit,
         verbose=True,
     )
 
@@ -94,10 +66,10 @@ def main(
 
     plotting.projections(mc, ag, mc_wt=weights)
 
-    fit_suffix = "_fit" if fit else ""
+    fit_suffix = "_fit" if args.fit else ""
     plt.savefig(
-        f"proj_{year}_{magnetisation}_{sign}_data_{data_sign}"
-        f"_weighter_{weighter_sign}{fit_suffix}.png"
+        f"proj_{args.year}_{args.magnetisation}_data_{args.data_sign}_{args.data_k_sign}"
+        f"_weighter_{args.weighter_sign}_{args.weighter_k_sign}{fit_suffix}.png"
     )
 
     plt.show()
@@ -109,32 +81,30 @@ if __name__ == "__main__":
     )
     parser.add_argument("year", type=str, choices={"2018"})
     parser.add_argument(
-        "sign",
+        "data_sign",
         type=str,
         choices={"cf", "dcs", "false"},
-        help="CF, DCS or false sign (WS amplitude but RS charges)",
+        help="CF, DCS or false sign (WS amplitude but RS charges) data",
+    )
+    parser.add_argument(
+        "weighter_sign",
+        type=str,
+        choices={"cf", "dcs"},
+        help="CF or DCS reweighter",
     )
     parser.add_argument("magnetisation", type=str, choices={"magdown"})
     parser.add_argument(
-        "data_sign",
+        "data_k_sign",
         type=str,
         choices={"k_plus", "k_minus"},
         help="whether to read K+ or K- data",
     )
     parser.add_argument(
-        "weighter_sign",
+        "weighter_k_sign",
         type=str,
         choices={"k_plus", "k_minus"},
         help="whether to open the reweighter trained on K+ or K-",
     )
     parser.add_argument("--fit", action="store_true")
 
-    args = parser.parse_args()
-    main(
-        args.year,
-        args.sign,
-        args.magnetisation,
-        args.data_sign,
-        args.weighter_sign,
-        args.fit,
-    )
+    main(parser.parse_args())

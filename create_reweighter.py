@@ -67,9 +67,9 @@ def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
 
     train_kwargs = {
         "n_estimators": 300,
-        "max_depth": 4,
-        "learning_rate": 0.5,
-        "min_samples_leaf": 200,
+        "max_depth": 5,
+        "learning_rate": 0.9,
+        "min_samples_leaf": 1200,
     }
     reweighter = EfficiencyWeighter(
         ag, mc, fit, efficiency_definitions.MIN_TIME, **train_kwargs
