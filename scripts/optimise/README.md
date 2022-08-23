@@ -48,3 +48,10 @@ tar -zcvf lib_data.tar.gz ../k3pi-data/lib_data
 ```
 tar -zcvf lib_efficiency.tar.gz lib_efficiency
 ```
+
+You'll need to have built the AmpGen amplitude models to do the optimisation - get the source files `cf.cpp`
+and `dcs.cpp` from Zenodo (see the README in `lib_efficiency/amplitude_models`), and build using `build.sh`.
+
+## Plotting
+Before making plots from the result of the optimisation (`opt_plots.py`), move all the output files from the condor
+jobs to a directory called `output/`.
