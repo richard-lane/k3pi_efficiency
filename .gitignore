@@ -2,9 +2,18 @@
 lib_efficiency/amplitude_models/cf.cpp
 lib_efficiency/amplitude_models/dcs.cpp
 
+# tarballs
+*.tar.gz
+
 # Data, output, etc.
 *.pkl
 *.png
+*.txt
+
+# Condor things
+*.out
+*.log
+*.err
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

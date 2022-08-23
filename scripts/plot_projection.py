@@ -20,6 +20,7 @@ from lib_efficiency import (
     plotting,
     efficiency_model,
     efficiency_definitions,
+    metrics,
 )
 
 

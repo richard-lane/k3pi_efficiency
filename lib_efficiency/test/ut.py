@@ -4,7 +4,7 @@ Things where I think it's actually useful to have a unit test
 """
 import pytest
 import numpy as np
-from ..plotting import _counts
+from ..metrics import _counts
 
 
 def test_counts_underflow():

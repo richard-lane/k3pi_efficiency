@@ -73,6 +73,11 @@ def main(
         ag_k, ag_pi1, ag_pi2, ag_pi3, mc_k, mc_pi1, mc_pi2, mc_pi3, weights, 8
     )
 
+    fit_suffix = "_fit" if fit else ""
+    plt.savefig(
+        f"z_{year}_{magnetisation}_{sign}_data_{data_sign}_weighter_{weighter_sign}{fit_suffix}.png"
+    )
+
     plt.show()
 
 

@@ -10,6 +10,7 @@ from scipy.optimize import curve_fit
 from scipy.spatial import ConvexHull
 
 from . import phsp_binning
+from .metrics import _counts
 
 
 def projections(
@@ -38,43 +39,6 @@ def projections(
     ax[0, 0].legend()
 
     return fig, ax
-
-
-def _counts(t: np.ndarray, wt: np.ndarray, bins: np.ndarray) -> Tuple:
-    """
-    Returns the counts in each bin and their errors
-
-    :param t: times
-    :param wt: weights
-    :param bins: bins
-
-    :return: counts in each bin
-    :return: errors on counts
-
-    """
-    indices = np.digitize(t, bins) - 1
-
-    # Underflow
-    if -1 in indices:
-        raise ValueError(f"Underflow: bins from {bins[0]}; {np.min(t)=}")
-
-    # Overflow
-    if len(bins) - 1 in indices:
-        raise ValueError("Overflow")
-
-    n_bins = len(bins) - 1
-
-    # Init with NaN so its obvious if something has gone wrong
-    counts = np.ones(n_bins) * np.nan
-    errs = np.ones(n_bins) * np.nan
-
-    for i in range(n_bins):
-        mask = indices == i
-
-        counts[i] = np.sum(wt[mask])
-        errs[i] = np.sqrt(np.sum(wt[mask] ** 2))
-
-    return counts, errs
 
 
 def _plot_shaded_area(
@@ -248,7 +212,9 @@ def _chunks_z(
     return points
 
 
-def _plot_hull(ax: plt.Axes, points: List[Tuple[float, float]], color: str) -> None:
+def _plot_hull(
+    ax: plt.Axes, points: List[Tuple[float, float]], color: str
+) -> ConvexHull:
     """
     Plot the convex hull surrounding a set of points on an axis
 
@@ -258,6 +224,8 @@ def _plot_hull(ax: plt.Axes, points: List[Tuple[float, float]], color: str) -> N
     array_points = np.array(points)
     for s in hull.simplices:
         ax.plot(array_points[s, 0], array_points[s, 1], f"{color}--", alpha=0.5)
+
+    return hull
 
 
 def z_scatter(
@@ -272,7 +240,7 @@ def z_scatter(
     orig_wt: np.ndarray,
     n: int,
     default_scale: bool = True,
-) -> Tuple[plt.Figure, plt.Axes]:
+) -> Tuple[plt.Figure, plt.Axes, float, float]:
     """
     Plot a scatter plot of the numerically evaluated coherence factor for a target dataset,
     an original dataset and a weighted version of the original dataset.
@@ -293,6 +261,8 @@ def z_scatter(
                           and plot both axes from -1 to +1
     :returns: the figure used to plot on
     :returns: the axis used to plot on
+    :returns: distance between ampgen and reweighted hulls
+    :returns: area of reweighted hull
 
     """
 
@@ -316,8 +286,8 @@ def z_scatter(
 
     # Plot hulls
     _plot_hull(ax, orig_points, "r")
-    _plot_hull(ax, target_points, "g")
-    _plot_hull(ax, reweighted_points, "b")
+    target_hull = _plot_hull(ax, target_points, "g")
+    reweighted_hull = _plot_hull(ax, reweighted_points, "b")
 
     if not default_scale:
         ax.set_xlim(-1.0, 1.0)
@@ -337,4 +307,12 @@ def z_scatter(
     ax.set_xlabel(r"$Re(Z)$")
     ax.set_ylabel(r"$Im(Z)$")
 
-    return fig, ax
+    # Find distance between ampgen + reweighted hulls, and the area of the
+    # reweighted hull
+    def centrum(hull):
+        return np.mean(hull.points, axis=0)
+
+    def distance(hull1, hull2):
+        return np.sqrt(np.sum((centrum(hull1) - centrum(hull2)) ** 2))
+
+    return fig, ax, distance(target_hull, reweighted_hull), reweighted_hull.volume

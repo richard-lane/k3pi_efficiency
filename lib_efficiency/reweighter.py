@@ -164,7 +164,12 @@ class EfficiencyWeighter:
     """
 
     def __init__(
-        self, target: np.ndarray, original: np.ndarray, fit: bool, min_t: float
+        self,
+        target: np.ndarray,
+        original: np.ndarray,
+        fit: bool,
+        min_t: float,
+        **train_kwargs,
     ):
         """
         Perform time weighting and train the BDT
@@ -178,18 +183,13 @@ class EfficiencyWeighter:
         :param min_t: minimum time, below which weights are set to 0.
                       The histogram division only considers times above this, but the fit fits to
                       all times.
+        :param train_kwargs: kwargs passed to GBReweighter when training
 
         """
         self._time_weighter = TimeWeighter(min_t, fit)
         self._time_weighter.fit(original[:, 5], target[:, 5])
 
-        self._phsp_weighter = GBReweighter(
-            # n_estimators=650,
-            # max_depth=5,
-            # learning_rate=0.2,
-            # min_samples_leaf=800
-            # n_estimators=10
-        )
+        self._phsp_weighter = GBReweighter(**train_kwargs)
 
         # Overall we will eight original -> target
         # but here weight the target such that it looks like original to prevent huge weights
