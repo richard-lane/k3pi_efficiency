@@ -20,6 +20,7 @@ from lib_efficiency import (
     plotting,
     efficiency_model,
     efficiency_definitions,
+    metrics,
 )
 
 
@@ -39,16 +40,23 @@ def main(
     ampgen_df = get.ampgen(ag_sign)
     if sign == "false":
         pgun_df = get.false_sign(show_progress=True)
+
+        # We need to flip the momenta of K+ events I think
+        # since maybe our phase space is folded over in some different way
+        # TODO instead of flipping these momenta, we should
+        # cut out the wrong ones
+        pgun_df = util.flip_momenta(pgun_df, pgun_df["K ID"] > 0)
+
     else:
         pgun_df = get.particle_gun(sign, show_progress=True)
-
         # We only want test data here
         pgun_df = pgun_df[~pgun_df["train"]]
 
-    ampgen_df = ampgen_df[~ampgen_df["train"]]
-
     # Deal with getting rid of evts/flipping momenta if we need to
     pgun_df = efficiency_util.k_sign_cut(pgun_df, data_sign)
+
+    # Flip ampgen sign if we need to
+    ampgen_df = ampgen_df[~ampgen_df["train"]]
     if data_sign == "k_minus":
         ampgen_df = util.flip_momenta(
             ampgen_df, np.ones(len(ampgen_df), dtype=np.bool_)
