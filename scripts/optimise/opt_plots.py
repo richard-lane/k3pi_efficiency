@@ -107,7 +107,13 @@ def _plots(params: np.ndarray, n_mins: int) -> None:
     areas = params[5]
     colourscale = LogNorm(vmin=np.min(areas), vmax=np.max(areas))
 
-    scatter_kw = {"y": distances, "c": colourscale(areas), "s": 1.5, "alpha": None}
+    scatter_kw = {
+        "y": distances,
+        "c": colourscale(areas),
+        "s": 1.5,
+        "alpha": None,
+        "cmap": "cividis",
+    }
     ax[0, 0].scatter(params[0], **scatter_kw)
     ax[0, 1].scatter(params[1], **scatter_kw)
     ax[1, 0].scatter(params[2], **scatter_kw)
@@ -126,7 +132,7 @@ def _plots(params: np.ndarray, n_mins: int) -> None:
 
     cbar_ax = fig.add_axes([0.875, 0.05, 0.05, 0.9])
     cbar = fig.colorbar(
-        ScalarMappable(norm=colourscale),
+        ScalarMappable(norm=colourscale, cmap=scatter_kw["cmap"]),
         cax=cbar_ax,
     )
     cbar.ax.tick_params(labelsize=8)
