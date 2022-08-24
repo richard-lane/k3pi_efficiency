@@ -33,10 +33,10 @@ def _params() -> dict:
         (os.getpid() * int(time.time()) * int(os.environ["CONDOR_JOB_ID"])) % 123456789
     )
     return {
-        "n_estimators": gen.integers(100, 1000),
-        "max_depth": gen.integers(2, 7),
-        "learning_rate": gen.random() ** 3,  # Skew towards 0
-        "min_samples_leaf": gen.integers(10, 2000),
+        "n_estimators": gen.integers(100, 1200),
+        "max_depth": gen.integers(2, 9),
+        "learning_rate": gen.random(),
+        "min_samples_leaf": gen.integers(10, 3000),
     }
 
 
@@ -91,7 +91,8 @@ def _optimise(ampgen_df: pd.DataFrame, pgun_df: pd.DataFrame, fit: bool):
 
     """
     # Train a reweighter
-    for _ in range(8):
+    n_repeats = 24
+    for _ in range(n_repeats):
         params = _params()
         weighter = _train(
             ampgen_df.loc[ampgen_df["train"]],
