@@ -7,27 +7,11 @@ import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 
 from lib_efficiency import mixing
-
-
-def _pdg_d_width():
-    """ D width from the PDG in MeV^-1 """
-    d_lifetime_s = 410.3  # x10^-15
-    sec_to_inv_mev = 1 / 6.58  # x10^22
-
-    return 1 / (d_lifetime_s * sec_to_inv_mev * 10 ** 7)
-
-
-def _pdg_x():
-    """ mixing x from pdg, dimensionless """
-    return 410.3 * 0.997 * 10 ** -5
-
-
-def _pdg_y():
-    """ mixing y from pdg, dimensionless """
-    return 1.23 * 0.01 / 2
+import pdg_params
 
 
 def _plot(params: mixing.MixingParams, path: str, scale: bool = False) -> None:
@@ -87,16 +71,19 @@ def main():
 
     """
     params = mixing.MixingParams(
-        d_mass=1864.84, d_width=_pdg_d_width(), mixing_x=_pdg_x(), mixing_y=_pdg_y()
+        d_mass=pdg_params.d_mass(),
+        d_width=pdg_params.d_width(),
+        mixing_x=pdg_params.mixing_x(),
+        mixing_y=pdg_params.mixing_y(),
     )
     _plot(params, "mixing.png", scale=False)
     _plot(params, "scaled_mixing.png", scale=True)
 
     params = mixing.MixingParams(
         d_mass=1864.84,
-        d_width=_pdg_d_width(),
-        mixing_x=100 * _pdg_x(),
-        mixing_y=_pdg_y(),
+        d_width=pdg_params.d_width(),
+        mixing_x=100 * pdg_params.mixing_x(),
+        mixing_y=pdg_params.mixing_y(),
     )
     _plot(params, "more_mixing.png", scale=True)
 

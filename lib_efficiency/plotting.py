@@ -13,6 +13,21 @@ from . import phsp_binning
 from .metrics import _counts
 
 
+def phsp_labels() -> Tuple:
+    """
+    Plot labels for phase space variables and time
+
+    """
+    return (
+        r"$M(K^+\pi^+) /MeV$",
+        r"$M(\pi_1^-\pi_2^-) /MeV$",
+        r"cos($\theta_+$)",
+        r"cos($\theta_-$)",
+        r"$\phi$",
+        r"t / ps",
+    )
+
+
 def projections(
     mc: np.ndarray, ag: np.ndarray, mc_wt: np.ndarray = None
 ) -> Tuple[plt.Figure, plt.Axes]:

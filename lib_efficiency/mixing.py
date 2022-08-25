@@ -14,6 +14,8 @@ from typing import Tuple
 from collections import namedtuple
 import numpy as np
 
+from .amplitude_models import amplitudes
+
 MixingParams = namedtuple(
     "Params",
     ["d_mass", "d_width", "mixing_x", "mixing_y"],
@@ -136,3 +138,80 @@ def mixed_dbar0_coeffs(
     """
     assert _good_p_q(p, q)
     return p * _g_minus(times, params) / q, _g_plus(times, params)
+
+
+def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
+    """
+    Convert from D0 lifetimes to inverse MeV
+
+    """
+    decay_times_ps = lifetimes * 0.4103
+    return decay_times_ps * (10 ** 10) / 6.58
+
+
+def _ws_weights(
+    times: np.ndarray,
+    d0_amplitudes: np.ndarray,
+    dbar0_amplitudes: np.ndarray,
+    params: MixingParams,
+    q_p: Tuple,
+) -> np.ndarray:
+    """
+    Weights from amplitudes + times
+
+    Only works for WS D0->K+3pi decays
+
+    :param times: decay times in lifetimes
+    :param d0_amplitudes: DCS amplitudes
+    :param dbar0_amplitudes: CF amplitudes
+    :param params: mixing parameters
+    :param q_p: values of q and p.
+    :returns: weights
+
+    """
+    # Convert lifetimes to inverse MeV
+    t_invmev = _lifetimes2invmev(times)
+
+    g_plus = _g_plus(t_invmev, params)
+    g_minus = _g_minus(t_invmev, params)
+
+    q, p = q_p
+    num = g_plus * d0_amplitudes + q * g_minus * dbar0_amplitudes / p
+    num = np.abs(num) ** 2
+
+    denom = np.abs(d0_amplitudes * g_plus) ** 2
+
+    return num / denom
+
+
+def ws_mixing_weights(
+    k3pi: Tuple,
+    t_lifetimes: np.ndarray,
+    mixing_params: MixingParams,
+    k_charge: int,
+    q_p: Tuple = None,
+) -> np.ndarray:
+    """
+    Weights to apply to WS events to add mixing as defined by the mixing parameters provided
+
+    :param k3pi: tuple of (k, pi1, pi2, pi3) parameters as returned by efficiency_util.k3pi
+    :param t: decay times in lifetimes
+    :param mixing_params: mixing parameters to use.
+                          The dimensionful parameters (D mass and width) should be in MeV.
+    :param k_charge: +1 or -1;
+    :param q_p: values of q and p. If not provided defaults to no CPV
+
+    """
+    if not q_p:
+        q_p = 1 / np.sqrt(2), 1 / np.sqrt(2)
+
+    # For now only deal with K+
+    # TODO deal with K- as well
+    assert k_charge == 1
+
+    # Evaluate amplitudes
+    # TODO Do we need to scale amplitudes by e^-t ?
+    cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge)
+    dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge)
+
+    return _ws_weights(t_lifetimes, dcs_amplitudes, cf_amplitudes, mixing_params, q_p)
