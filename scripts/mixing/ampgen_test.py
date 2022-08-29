@@ -13,11 +13,14 @@ from fourbody.param import helicity_param
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-fitter"))
 import common
 import pdg_params
-from lib_efficiency import efficiency_util, mixing, metrics
+from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.plotting import phsp_labels
 from lib_efficiency.phsp_binning import coherence_factor
+from lib_time_fit import util as fit_util
+from lib_time_fit import fitter, plotting
 
 
 def _weight_hist(weights: np.ndarray) -> None:
@@ -42,6 +45,21 @@ def _bc_params(
     ) / 4
 
 
+def _ratio_err(
+    bins: np.ndarray,
+    cf_df: pd.DataFrame,
+    dcs_df: pd.DataFrame,
+    dcs_wt: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Ratio and error
+
+    """
+    cf_counts, cf_errs = fit_util.bin_times(cf_df["time"], bins=bins)
+    dcs_counts, dcs_errs = fit_util.bin_times(dcs_df["time"], bins=bins, weights=dcs_wt)
+    return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
+
+
 def _time_plot(
     params: mixing.MixingParams,
     cf_df: pd.DataFrame,
@@ -52,27 +70,15 @@ def _time_plot(
     Plot ratio of WS/RS decay times
 
     """
-    cf_t = cf_df["time"]
-    dcs_t = dcs_df["time"]
-
-    fig, ax = plt.subplots()
-
     bins = np.linspace(0, 8, 15)
     bins = np.append(bins, 12.6)
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
-    cf_counts, cf_errs = metrics._counts(cf_t, np.ones(len(cf_t)), bins)
-    dcs_counts, dcs_errs = metrics._counts(dcs_t, np.ones(len(dcs_t)), bins)
-    weighted_counts, weighted_errs = metrics._counts(dcs_t, dcs_wt, bins)
+    fig, ax = plt.subplots()
 
-    ratio = dcs_counts / cf_counts
-    err = ratio * np.sqrt((dcs_errs / dcs_counts) ** 2 + (cf_errs / cf_counts) ** 2)
-
-    weighted_ratio = weighted_counts / cf_counts
-    weighted_err = weighted_ratio * np.sqrt(
-        (weighted_errs / weighted_counts) ** 2 + (cf_errs / cf_counts) ** 2
-    )
+    ratio, err = _ratio_err(bins, cf_df, dcs_df, None)
+    weighted_ratio, weighted_err = _ratio_err(bins, cf_df, dcs_df, dcs_wt)
 
     ax.errorbar(centres, ratio, yerr=err, xerr=widths, label="Unweighted", fmt="k+")
     ax.errorbar(
@@ -84,11 +90,18 @@ def _time_plot(
         fmt="r+",
     )
 
+    initial_guess = fit_util.MixingParams(1, 1, 1)
+    minuit = fitter.no_constraints(ratio, err, bins, initial_guess)
+    weighted_minuit = fitter.no_constraints(
+        weighted_ratio, weighted_err, bins, initial_guess
+    )
+
     # Ideal
-    a, (b, c) = 1, _bc_params(dcs_df, dcs_wt, params)
-    points = np.linspace(*ax.get_xlim())
-    ax.plot(points, [1 for _ in points], "k--")
-    ax.plot(points, [a + b * x + c * x ** 2 for x in points], "r--")
+    ideal = (1, *_bc_params(dcs_df, dcs_wt, params))
+
+    plotting.no_constraints(ax, ideal, "k--", "True")
+    plotting.no_constraints(ax, minuit.values, "g--", "Fit (no mixing)")
+    plotting.no_constraints(ax, weighted_minuit.values, "r--", "Fit (mixing)")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")
@@ -151,8 +164,8 @@ def main():
 
     mixing_weights = mixing.ws_mixing_weights(dcs_k3pi, dcs_lifetimes, params, +1, q_p)
 
-    _weight_hist(mixing_weights)
-    _hists(cf_df, dcs_df, mixing_weights)
+    # _weight_hist(mixing_weights)
+    # _hists(cf_df, dcs_df, mixing_weights)
 
     _time_plot(params, cf_df, dcs_df, mixing_weights)
 

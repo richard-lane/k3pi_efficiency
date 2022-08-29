@@ -179,7 +179,7 @@ def _ws_weights(
     num = g_plus * d0_amplitudes + q * g_minus * dbar0_amplitudes / p
     num = np.abs(num) ** 2
 
-    denom = np.abs(d0_amplitudes * g_plus) ** 2
+    denom = np.exp(-times) * np.abs(d0_amplitudes) ** 2
 
     return num / denom
 
@@ -210,7 +210,6 @@ def ws_mixing_weights(
     assert k_charge == 1
 
     # Evaluate amplitudes
-    # TODO Do we need to scale amplitudes by e^-t ?
     cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge)
     dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge)
 
