@@ -64,12 +64,11 @@ def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
     print("saved fig")
 
     # Create + train reweighter
-
     train_kwargs = {
         "n_estimators": 300,
         "max_depth": 5,
-        "learning_rate": 0.9,
-        "min_samples_leaf": 1200,
+        "learning_rate": 0.7,
+        "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(
         ag, mc, fit, efficiency_definitions.MIN_TIME, **train_kwargs

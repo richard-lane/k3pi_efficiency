@@ -71,7 +71,7 @@ def _time_plot(
 
     """
     bins = np.linspace(0, 8, 15)
-    bins = np.append(bins, 12.6)
+    bins = np.append(bins, 14.6)
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
@@ -91,17 +91,21 @@ def _time_plot(
     )
 
     initial_guess = fit_util.MixingParams(1, 1, 1)
-    minuit = fitter.no_constraints(ratio, err, bins, initial_guess)
     weighted_minuit = fitter.no_constraints(
         weighted_ratio, weighted_err, bins, initial_guess
     )
 
-    # Ideal
-    ideal = (1, *_bc_params(dcs_df, dcs_wt, params))
+    # No Mixing
+    best_val, _ = fitter.weighted_mean(ratio, err)
+    plotting.no_mixing(ax, best_val, "k--")
 
-    plotting.no_constraints(ax, ideal, "k--", "True")
-    plotting.no_constraints(ax, minuit.values, "g--", "Fit (no mixing)")
+    # Mixing
     plotting.no_constraints(ax, weighted_minuit.values, "r--", "Fit (mixing)")
+
+    # Actual value
+    # TODO fix this, it doesn't look right
+    ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params))
+    plotting.no_constraints(ax, ideal, "k--", "True")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")

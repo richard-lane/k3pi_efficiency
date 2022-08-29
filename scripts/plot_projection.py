@@ -31,7 +31,7 @@ def main(args: argparse.Namespace):
 
     """
     pgun_df = common.pgun_df(args.data_sign, args.data_k_sign)
-    ag_sign = "dcs" if args.data_sign == "false" else sign
+    ag_sign = "dcs" if args.data_sign == "false" else args.data_sign
     ampgen_df = common.ampgen_df(ag_sign, args.data_k_sign)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
