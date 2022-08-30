@@ -71,7 +71,7 @@ def _time_plot(
 
     """
     bins = np.linspace(0, 8, 15)
-    bins = np.append(bins, 14.6)
+    bins = np.append(bins, 17.71)
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
