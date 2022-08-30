@@ -13,7 +13,9 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 
+import common
 from lib_data import get, util
 
 from lib_efficiency import (
@@ -36,19 +38,8 @@ def _times_and_weights(
     Get testing times and weights
 
     """
-    ampgen_df = get.ampgen(sign)
-    pgun_df = get.particle_gun(sign, show_progress=True)
-
-    # We only want test data here
-    pgun_df = pgun_df[~pgun_df["train"]]
-    ampgen_df = ampgen_df[~ampgen_df["train"]]
-
-    # Deal with getting rid of evts/flipping momenta if we need to
-    pgun_df = efficiency_util.k_sign_cut(pgun_df, data_sign)
-    if data_sign == "k_minus":
-        ampgen_df = util.flip_momenta(
-            ampgen_df, np.ones(len(ampgen_df), dtype=np.bool_)
-        )
+    ampgen_df = common.ampgen_df(sign, data_sign)
+    pgun_df = common.pgun_df(sign, data_sign)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
@@ -136,7 +127,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "data_sign",
         type=str,
-        choices={"k_plus", "k_minus"},
+        choices={"k_plus", "k_minus", "both"},
         help="whether to read K+ or K- data",
     )
     parser.add_argument(

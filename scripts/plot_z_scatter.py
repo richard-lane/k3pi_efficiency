@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "data_k_sign",
         type=str,
-        choices={"k_plus", "k_minus"},
+        choices={"k_plus", "k_minus", "both"},
         help="whether to read K+ or K- data",
     )
     parser.add_argument(

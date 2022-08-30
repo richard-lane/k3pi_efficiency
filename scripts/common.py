@@ -20,16 +20,24 @@ def ampgen_df(sign: str, k_sign: str) -> pd.DataFrame:
 
     """
     assert sign in {"dcs", "cf"}
-    assert k_sign in {"k_plus", "k_minus"}
+    assert k_sign in {"k_plus", "k_minus", "both"}
 
     dataframe = get.ampgen("dcs" if sign == "false" else sign)
     dataframe = dataframe[~dataframe["train"]]
 
-    if k_sign == "k_minus":
-        dataframe = util.flip_momenta(
-            dataframe, np.ones(len(dataframe), dtype=np.bool_)
-        )
+    if k_sign == "k_plus":
+        # Don't flip any momenta
+        return dataframe
 
+    if k_sign == "k_minus":
+        # Flip all the momenta
+        mask = np.ones(len(dataframe), dtype=np.bool_)
+
+    elif k_sign == "both":
+        # Flip half of the momenta randomly
+        mask = np.random.random(len(dataframe)) < 0.5
+
+    dataframe = util.flip_momenta(dataframe, mask)
     return dataframe
 
 
@@ -51,7 +59,10 @@ def pgun_df(sign: str, k_sign: str) -> pd.DataFrame:
 
     else:
         dataframe = get.particle_gun(sign, show_progress=True)
+
         # We only want test data here
         dataframe = dataframe[~dataframe["train"]]
+
+        dataframe = efficiency_util.k_sign_cut(dataframe, k_sign)
 
     return dataframe

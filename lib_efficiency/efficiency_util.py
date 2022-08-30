@@ -53,7 +53,10 @@ def k_sign_cut(dataframe: pd.DataFrame, k_sign: str):
     Choose the right kaons - modifies the dataframe in place
 
     """
-    assert k_sign in {"k_minus", "k_plus"}
+    assert k_sign in {"k_minus", "k_plus", "both"}
+
+    if k_sign == "both":
+        return dataframe
 
     k_ids = dataframe["K ID"].to_numpy()
     keep = k_ids < 0 if k_sign == "k_minus" else k_ids > 0
