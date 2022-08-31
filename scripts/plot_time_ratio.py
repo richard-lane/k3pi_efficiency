@@ -11,12 +11,10 @@ from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 
 import common
-from lib_data import get, util
 
 from lib_efficiency import (
     efficiency_util,
@@ -73,9 +71,9 @@ def _allowed_times(
     return times[mask], wt[mask]
 
 
-def main(year: str, magnetisation: str, data_sign: str, weighter_sign: str, fit: bool):
+def main(args: argparse.Namespace):
     """
-    Create a plot
+    Create a plot of decay times
 
     """
     bins = np.array(
@@ -94,10 +92,20 @@ def main(year: str, magnetisation: str, data_sign: str, weighter_sign: str, fit:
         ]
     )
     rs_ag_t, rs_mc_t, rs_wt = _times_and_weights(
-        year, magnetisation, "cf", data_sign, weighter_sign, fit
+        args.year,
+        args.magnetisation,
+        "cf",
+        args.data_k_charge,
+        args.weighter_k_charge,
+        args.fit,
     )
     ws_ag_t, ws_mc_t, ws_wt = _times_and_weights(
-        year, magnetisation, "dcs", data_sign, weighter_sign, fit
+        args.year,
+        args.magnetisation,
+        "dcs",
+        args.data_k_charge,
+        args.weighter_k_charge,
+        args.fit,
     )
 
     # Keep only times in the allowed range
@@ -109,34 +117,21 @@ def main(year: str, magnetisation: str, data_sign: str, weighter_sign: str, fit:
 
     plotting.plot_ratios(rs_mc_t, ws_mc_t, rs_ag_t, ws_ag_t, rs_wt, ws_wt, bins)
 
-    fit_suffix = "_fit" if fit else ""
+    fit_suffix = "_fit" if args.fit else ""
     plt.savefig(
-        f"ratio_{year}_{magnetisation}_data_{data_sign}_weighter_{weighter_sign}{fit_suffix}.png"
+        f"ratio_{args.year}_{args.magnetisation}_data_{args.data_k_charge}"
+        f"_weighter_{args.weighter_k_charge}{fit_suffix}.png"
     )
 
     plt.show()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Make plots of ampgen + MC phase space variables, but don't do the reweighting."
-    )
-    parser.add_argument("year", type=str, choices={"2018"})
-    parser.add_argument("magnetisation", type=str, choices={"magdown"})
+    parser = common.parser("Plot ratio of DCS/CF histograms")
 
-    parser.add_argument(
-        "data_sign",
-        type=str,
-        choices={"k_plus", "k_minus", "both"},
-        help="whether to read K+ or K- data",
-    )
-    parser.add_argument(
-        "weighter_sign",
-        type=str,
-        choices={"k_plus", "k_minus"},
-        help="whether to open the reweighter trained on K+ or K-",
-    )
-    parser.add_argument("--fit", action="store_true")
+    # Remove CF/DCS arguments, since we run over both DCS/CF
+    # data and use both reweighters in this script
+    common.remove_arg(parser, "decay_type")
+    common.remove_arg(parser, "weighter_type")
 
-    args = parser.parse_args()
-    main(args.year, args.magnetisation, args.data_sign, args.weighter_sign, args.fit)
+    main(parser.parse_args())

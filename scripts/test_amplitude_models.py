@@ -25,8 +25,9 @@ def main():
     and plot
 
     """
-    ws_df = get.ampgen("dcs")
-    rs_df = get.ampgen("cf")
+    n_evts = 2000000  # Only use the first n evts otherwise my computer crashes
+    ws_df = get.ampgen("dcs")[:n_evts]
+    rs_df = get.ampgen("cf")[:n_evts]
 
     # tuple of (k, pi1, pi2, pi3) for each
     ws_k, ws_pi1, ws_pi2, ws_pi3 = efficiency_util.k_3pi(ws_df)

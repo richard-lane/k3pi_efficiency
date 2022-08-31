@@ -68,6 +68,24 @@ def parser(description: str) -> argparse.ArgumentParser:
     return retval
 
 
+def remove_arg(argparser: argparse.ArgumentParser, arg: str):
+    """
+    Remove an argument from an ArgumentParser instance
+
+    """
+    for action in argparser._actions:
+        opts = action.option_strings
+        if (opts and opts[0] == arg) or action.dest == arg:
+            argparser._remove_action(action)
+            break
+
+    for action in argparser._action_groups:
+        for group_action in action._group_actions:
+            if group_action.dest == arg:
+                action._group_actions.remove(group_action)
+                return
+
+
 def ampgen_df(sign: str, k_sign: str) -> pd.DataFrame:
     """
     AmpGen dataframe - testing data
