@@ -87,11 +87,15 @@ def pgun_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     assert decay_type in {"dcs", "cf", "false"}
     assert k_charge in {"k_plus", "k_minus", "both"}
 
-    dataframe = get.particle_gun(decay_type, show_progress=True)
+    if decay_type == "false":
+        dataframe = get.false_sign()
 
-    # We only want to train on training data
-    train_mask = dataframe["train"] if train else ~dataframe["train"]
-    dataframe = dataframe[train_mask]
+    else:
+        dataframe = get.particle_gun(decay_type, show_progress=True)
+
+        # We only want to train on training data
+        train_mask = dataframe["train"] if train else ~dataframe["train"]
+        dataframe = dataframe[train_mask]
 
     # We may also only want to consider candidates with the same sign kaon
     dataframe = k_sign_cut(dataframe, k_charge)
