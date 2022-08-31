@@ -91,7 +91,7 @@ class TimeWeighter:
 
     """
 
-    def __init__(self, min_t: float, fit: bool):
+    def __init__(self, min_t: float, fit: bool, n_bins: int, n_neighs: float):
         """
         Tell us whether we're doing a fit to the decay times
 
@@ -102,7 +102,9 @@ class TimeWeighter:
         """
         self.min_t = min_t
         self.fitter = (
-            TimeFitReweighter() if fit else BinsReweighter(n_bins=20000, n_neighs=10)
+            TimeFitReweighter()
+            if fit
+            else BinsReweighter(n_bins=n_bins, n_neighs=n_neighs)
         )
 
     def fit(self, mc_times: np.ndarray, ampgen_times: np.ndarray):
@@ -168,6 +170,8 @@ class EfficiencyWeighter:
         original: np.ndarray,
         fit: bool,
         min_t: float,
+        n_bins: int = 20000,
+        n_neighs: float = 10.0,
         **train_kwargs,
     ):
         """
@@ -182,10 +186,13 @@ class EfficiencyWeighter:
         :param min_t: minimum time, below which weights are set to 0.
                       The histogram division only considers times above this, but the fit fits to
                       all times.
+        :param n_bins: if not fitting, the number of bins to use for the hist division
+        :param n_neighs: if not fitting, the number of neighbours to account for
+                         when doing the histogram division
         :param train_kwargs: kwargs passed to GBReweighter when training
 
         """
-        self._time_weighter = TimeWeighter(min_t, fit)
+        self._time_weighter = TimeWeighter(min_t, fit, n_bins, n_neighs)
         self._time_weighter.fit(original[:, 5], target[:, 5])
 
         self._phsp_weighter = GBReweighter(**train_kwargs)
