@@ -1,12 +1,9 @@
 """
 Make plots of the variables used in the reweighting, before and after the reweighting
 
-Test data
-
 """
 import sys
 import pathlib
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
@@ -25,14 +22,17 @@ from lib_efficiency import (
 )
 
 
-def main(args: argparse.Namespace):
+def main(args):
     """
     Create a plot
 
     """
-    pgun_df = common.pgun_df(args.data_sign, args.data_k_sign)
-    ag_sign = "dcs" if args.data_sign == "false" else args.data_sign
-    ampgen_df = common.ampgen_df(ag_sign, args.data_k_sign)
+    pgun_df = common.pgun_df(args.decay_type, args.data_k_charge)
+
+    # False sign looks like DCS in projections
+    ampgen_df = common.ampgen_df(
+        "dcs" if args.decay_type == "false" else args.decay_type, args.data_k_charge
+    )
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
@@ -46,9 +46,9 @@ def main(args: argparse.Namespace):
         mc_pi2,
         mc_pi3,
         mc_t,
-        args.weighter_k_sign,
+        args.weighter_k_charge,
         args.year,
-        args.weighter_sign,
+        args.weighter_type,
         args.magnetisation,
         args.fit,
         verbose=True,
@@ -68,43 +68,13 @@ def main(args: argparse.Namespace):
 
     fit_suffix = "_fit" if args.fit else ""
     plt.savefig(
-        f"proj_{args.year}_{args.magnetisation}_data_{args.data_sign}_{args.data_k_sign}"
-        f"_weighter_{args.weighter_sign}_{args.weighter_k_sign}{fit_suffix}.png"
+        f"proj_{args.year}_{args.magnetisation}_data_{args.decay_type}_{args.data_k_charge}"
+        f"_weighter_{args.weighter_type}_{args.weighter_k_charge}{fit_suffix}.png"
     )
 
     plt.show()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Make plots of ampgen + MC phase space variables, and do the reweighting."
-    )
-    parser.add_argument("year", type=str, choices={"2018"})
-    parser.add_argument(
-        "data_sign",
-        type=str,
-        choices={"cf", "dcs", "false"},
-        help="CF, DCS or false sign (WS amplitude but RS charges) data",
-    )
-    parser.add_argument(
-        "weighter_sign",
-        type=str,
-        choices={"cf", "dcs"},
-        help="CF or DCS reweighter",
-    )
-    parser.add_argument("magnetisation", type=str, choices={"magdown"})
-    parser.add_argument(
-        "data_k_sign",
-        type=str,
-        choices={"k_plus", "k_minus", "both"},
-        help="whether to read K+ or K- data",
-    )
-    parser.add_argument(
-        "weighter_k_sign",
-        type=str,
-        choices={"k_plus", "k_minus"},
-        help="whether to open the reweighter trained on K+ or K-",
-    )
-    parser.add_argument("--fit", action="store_true")
-
+    parser = common.parser("Plot projections of phase space variables")
     main(parser.parse_args())

@@ -10,7 +10,7 @@ import numpy as np
 from fourbody.param import helicity_param
 
 from . import efficiency_definitions
-from .reweighter import Binned_Reweighter
+from .reweighter import EfficiencyWeighter
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
@@ -42,7 +42,7 @@ def weights(
     :param pi3: 2d numpy array of pi3 data (pi3_px, pi3_py, pi3_pz, pi3_e) in GeV. Shape (4, N).
                 This pion has the same charge as the kaon.
     :param t: 1d numpy arrays of decay times in lifetimes.
-    :param k_sign: "k_plus" or "k_minus"
+    :param k_sign: "k_plus", "k_minus" or "both"
     :param k_id: particle id of the kaon: -321 for K-, 321 for K+. This is used to flip the sign
                  of the particles' 3 momenta.
     :param year: data taking year.
@@ -61,8 +61,8 @@ def weights(
 
     if verbose:
         print(
-            f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}\n\t{k_sign=}"
-            f"\n\tN:\t{len(k.T)}"
+            f"Finding {sign} efficiencies for\n\tYear:\t{int(year)}\n\tMag:\t{magnetisation}"
+            f"\n\t{k_sign=}\n\tN:\t{len(k.T)}"
         )
         print(
             f"{np.sum(t < efficiency_definitions.MIN_TIME)} times below minimum"
@@ -82,7 +82,7 @@ def weights(
     if verbose:
         print(f"Opening reweighter at {reweighter_path}")
     with open(reweighter_path, "rb") as f:
-        reweighter: Binned_Reweighter = pickle.load(f)
+        reweighter: EfficiencyWeighter = pickle.load(f)
 
     # Momentum order
     pi1, pi2 = util.momentum_order(k, pi1, pi2)

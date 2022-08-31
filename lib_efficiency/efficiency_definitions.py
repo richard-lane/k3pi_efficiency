@@ -25,7 +25,7 @@ def reweighter_path(
     assert year in {"2018"}
     assert sign in {"cf", "dcs"}
     assert magnetisation in {"magdown"}
-    assert k_sign in {"k_plus", "k_minus"}
+    assert k_sign in {"k_plus", "k_minus", "both"}
 
     time_suffix = "_time_fit" if time_fit else ""
 

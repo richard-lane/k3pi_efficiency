@@ -4,6 +4,7 @@ Common utilities for running scripts
 """
 import sys
 import pathlib
+import argparse
 import numpy as np
 import pandas as pd
 
@@ -12,6 +13,59 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from lib_data import get, util
 from lib_efficiency import efficiency_util
+
+
+def parser(description: str) -> argparse.ArgumentParser:
+    """
+    Create an argument parser for all the right arguments
+
+    :param description: description of your script's functionality
+    :returns: argument parser object with all arguments added
+
+    """
+    retval = argparse.ArgumentParser(description=description)
+
+    retval.add_argument(
+        "year",
+        type=str,
+        choices={"2018"},
+        help="Data taking year, so we know which reweighter to open",
+    )
+    retval.add_argument(
+        "decay_type",
+        type=str,
+        choices={"cf", "dcs", "false"},
+        help="CF, DCS or false sign (WS amplitude but RS charges) data",
+    )
+    retval.add_argument(
+        "weighter_type",
+        type=str,
+        choices={"cf", "dcs"},
+        help="Whether to open the reweighter trained on DCS or CF data",
+    )
+    retval.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown"},
+        help="So we know which reweighter to open",
+    )
+    retval.add_argument(
+        "data_k_charge",
+        type=str,
+        choices={"k_plus", "k_minus", "both"},
+        help="whether to use D->K+ or K- 3pi data (or both)",
+    )
+    retval.add_argument(
+        "weighter_k_charge",
+        type=str,
+        choices={"k_plus", "k_minus", "both"},
+        help="whether to open the reweighter trained on D0->K+ or K- 3pi",
+    )
+    retval.add_argument(
+        "--fit", action="store_true", help="So we know which reweighter to open"
+    )
+
+    return retval
 
 
 def ampgen_df(sign: str, k_sign: str) -> pd.DataFrame:

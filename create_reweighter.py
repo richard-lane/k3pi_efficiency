@@ -8,7 +8,6 @@ import pickle
 import pathlib
 import argparse
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
 from lib_efficiency import efficiency_definitions, efficiency_util, plotting
@@ -20,6 +19,29 @@ from lib_data import util
 from lib_data import get
 
 
+def _ag_df(sign: str, k_sign: str):
+    """
+    Get the AmpGen dataframe
+
+    """
+    ag_df = get.ampgen(sign)
+    ag_df = ag_df[ag_df["train"]]
+
+    if k_sign == "k_plus":
+        # Don't flip any momenta
+        return ag_df
+
+    if k_sign == "k_minus":
+        # Flip all the momenta
+        mask = np.ones(len(ag_df), dtype=np.bool_)
+
+    elif k_sign == "both":
+        # Flip half of the momenta randomly
+        mask = np.random.random(len(ag_df)) < 0.5
+
+    return util.flip_momenta(ag_df, mask)
+
+
 def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
     """
     Read the right data, use it to create a reweighter, pickle the reweighter
@@ -29,19 +51,14 @@ def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
         os.mkdir(efficiency_definitions.REWEIGHTER_DIR)
 
     # Read the right stuff
-    ag_df = get.ampgen(sign)
+    ag_df = _ag_df(sign, k_sign)
     pgun_df = get.particle_gun(sign, show_progress=True)
 
     # We only want to train on training data
-    ag_df = ag_df[ag_df["train"]]
     pgun_df = pgun_df[pgun_df["train"]]
 
-    # We also only want to consider candidates with the same sign kaon
+    # We may also only want to consider candidates with the same sign kaon
     pgun_df = efficiency_util.k_sign_cut(pgun_df, k_sign)
-
-    # If we are looking at K-, we need to flip our AmpGen 3 momenta
-    if k_sign == "k_minus":
-        ag_df = util.flip_momenta(ag_df, np.ones(len(ag_df), dtype=np.bool_))
 
     # Get the right arrays
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ag_df)
@@ -90,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "k_sign",
         type=str,
-        choices={"k_plus", "k_minus"},
+        choices={"k_plus", "k_minus", "both"},
         help="Whether to create a reweighter for K+ or K- type evts",
     )
     parser.add_argument("--fit", action="store_true")
