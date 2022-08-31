@@ -16,30 +16,6 @@ from lib_efficiency.reweighter import EfficiencyWeighter
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
 
 from lib_data import util
-from lib_data import get
-
-
-def _ag_df(sign: str, k_sign: str):
-    """
-    Get the AmpGen dataframe
-
-    """
-    ag_df = get.ampgen(sign)
-    ag_df = ag_df[ag_df["train"]]
-
-    if k_sign == "k_plus":
-        # Don't flip any momenta
-        return ag_df
-
-    if k_sign == "k_minus":
-        # Flip all the momenta
-        mask = np.ones(len(ag_df), dtype=np.bool_)
-
-    elif k_sign == "both":
-        # Flip half of the momenta randomly
-        mask = np.random.random(len(ag_df)) < 0.5
-
-    return util.flip_momenta(ag_df, mask)
 
 
 def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
@@ -51,14 +27,8 @@ def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
         os.mkdir(efficiency_definitions.REWEIGHTER_DIR)
 
     # Read the right stuff
-    ag_df = _ag_df(sign, k_sign)
-    pgun_df = get.particle_gun(sign, show_progress=True)
-
-    # We only want to train on training data
-    pgun_df = pgun_df[pgun_df["train"]]
-
-    # We may also only want to consider candidates with the same sign kaon
-    pgun_df = efficiency_util.k_sign_cut(pgun_df, k_sign)
+    ag_df = efficiency_util.ampgen_df(sign, k_sign, train=True)
+    pgun_df = efficiency_util.pgun_df(sign, k_sign, train=True)
 
     # Get the right arrays
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ag_df)
@@ -82,7 +52,7 @@ def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 200,
+        "n_estimators": 20,
         "max_depth": 5,
         "learning_rate": 0.9,
         "min_samples_leaf": 1800,

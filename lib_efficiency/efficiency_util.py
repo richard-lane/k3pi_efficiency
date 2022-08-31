@@ -10,7 +10,7 @@ import pandas as pd
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
-from lib_data import definitions, util
+from lib_data import definitions, util, get
 
 
 def k_3pi(
@@ -29,28 +29,9 @@ def k_3pi(
     return tuple(np.row_stack([dataframe[x] for x in labels]) for labels in particles)
 
 
-def efficiency_df(dataframe: pd.DataFrame) -> pd.DataFrame:
+def k_sign_cut(dataframe: pd.DataFrame, k_sign: str) -> pd.DataFrame:
     """
-    Transform a dataframe into what we need to do the efficiency reweighting
-    Basically this just gets rid of all the unnecessary columns, and uses the
-    "K ID" column to flip the 3-momenta of any D->K-3pi type candidates (since
-    the AmpGen events were generated as K+3pi).
-
-    :param dataframe: dataframe to transform
-    :returns: copy of the dataframe with only the momentum and time columns
-
-    """
-    # TODO remove
-    assert False, "use k_sign_cut instead"
-    keep_columns = [*definitions.MOMENTUM_COLUMNS, "time", "K ID"]
-    df_slice = dataframe[keep_columns]
-
-    return util.flip_momenta(df_slice)
-
-
-def k_sign_cut(dataframe: pd.DataFrame, k_sign: str):
-    """
-    Choose the right kaons - modifies the dataframe in place
+    Choose the right kaons - returns a copy
 
     """
     assert k_sign in {"k_minus", "k_plus", "both"}
@@ -58,9 +39,60 @@ def k_sign_cut(dataframe: pd.DataFrame, k_sign: str):
     if k_sign == "both":
         return dataframe
 
-    k_ids = dataframe["K ID"].to_numpy()
+    copy = dataframe.copy()
+
+    k_ids = copy["K ID"].to_numpy()
     keep = k_ids < 0 if k_sign == "k_minus" else k_ids > 0
 
     print(f"k sign cut: keeping {np.sum(keep)} of {len(keep)}")
 
-    return dataframe[keep]
+    return copy[keep]
+
+
+def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
+    """
+    AmpGen dataframe
+
+    """
+    assert decay_type in {"dcs", "cf", "false"}
+    assert k_charge in {"k_plus", "k_minus", "both"}
+
+    # False sign looks like DCS in projections
+    dataframe = get.ampgen("dcs" if decay_type == "false" else decay_type)
+
+    train_mask = dataframe["train"] if train else ~dataframe["train"]
+    dataframe = dataframe[train_mask]
+
+    if k_charge == "k_plus":
+        # Don't flip any momenta
+        return dataframe
+
+    if k_charge == "k_minus":
+        # Flip all the momenta
+        mask = np.ones(len(dataframe), dtype=np.bool_)
+
+    elif k_charge == "both":
+        # Flip half of the momenta randomly
+        mask = np.random.random(len(dataframe)) < 0.5
+
+    dataframe = util.flip_momenta(dataframe, mask)
+    return dataframe
+
+
+def pgun_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
+    """
+    Particle gun dataframe
+
+    """
+    assert decay_type in {"dcs", "cf", "false"}
+    assert k_charge in {"k_plus", "k_minus", "both"}
+
+    dataframe = get.particle_gun(decay_type, show_progress=True)
+
+    # We only want to train on training data
+    train_mask = dataframe["train"] if train else ~dataframe["train"]
+    dataframe = dataframe[train_mask]
+
+    # We may also only want to consider candidates with the same sign kaon
+    dataframe = k_sign_cut(dataframe, k_charge)
+    return dataframe

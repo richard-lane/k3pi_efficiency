@@ -26,6 +26,7 @@ def main(sign: str):
     """
     ampgen_df = get.ampgen(sign)
     pgun_df = get.particle_gun(sign, show_progress=True)
+    # TODO change this to the right thing
     pgun_df = efficiency_util.efficiency_df(pgun_df[pgun_df["train"]])
 
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)

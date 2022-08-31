@@ -36,8 +36,8 @@ def _times_and_weights(
     Get testing times and weights
 
     """
-    ampgen_df = common.ampgen_df(sign, data_sign)
-    pgun_df = common.pgun_df(sign, data_sign)
+    pgun_df = efficiency_util.pgun_df(sign, data_sign, train=False)
+    ampgen_df = efficiency_util.ampgen_df(sign, data_sign, train=False)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)

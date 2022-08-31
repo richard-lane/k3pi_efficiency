@@ -27,11 +27,9 @@ def main(args):
     Create a plot
 
     """
-    pgun_df = common.pgun_df(args.decay_type, args.data_k_charge)
-
-    # False sign looks like DCS in projections
-    ampgen_df = common.ampgen_df(
-        "dcs" if args.decay_type == "false" else args.decay_type, args.data_k_charge
+    pgun_df = efficiency_util.pgun_df(args.decay_type, args.data_k_charge, train=False)
+    ampgen_df = efficiency_util.ampgen_df(
+        args.decay_type, args.data_k_charge, train=False
     )
 
     # Just pass the arrays into the efficiency function and it should find the right weights
