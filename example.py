@@ -183,7 +183,7 @@ def main():
     # Hacky - plot the fit
     pts = np.linspace(*ax.ravel()[-1].get_xlim())
     params = fit_weighter._time_weighter.fitter.fit_vals
-    ax.ravel()[-1].plot(pts, pdf(pts, params), "r--")  # Had to scale this manually
+    ax.ravel()[-1].plot(pts, pdf(pts, params), "r--")
 
     fig.suptitle("Reweight with time fit")
     fig.tight_layout()

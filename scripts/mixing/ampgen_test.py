@@ -14,7 +14,6 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-fitter"))
-import common
 import pdg_params
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.plotting import phsp_labels
@@ -104,8 +103,8 @@ def _time_plot(
 
     # Actual value
     # TODO fix this, it doesn't look right
-    ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params))
-    plotting.no_constraints(ax, ideal, "k--", "True")
+    # ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params))
+    # plotting.no_constraints(ax, ideal, "k--", "True")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")
@@ -152,8 +151,8 @@ def main():
 
     """
     # Read AmpGen dataframes
-    cf_df = common.ampgen_df("cf", "k_plus")
-    dcs_df = common.ampgen_df("dcs", "k_plus")
+    cf_df = efficiency_util.ampgen_df("cf", "k_plus", train=None)
+    dcs_df = efficiency_util.ampgen_df("dcs", "k_plus", train=None)
 
     # Introduce mixing
     params = mixing.MixingParams(

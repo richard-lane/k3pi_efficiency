@@ -60,7 +60,14 @@ def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     # False sign looks like DCS in projections
     dataframe = get.ampgen("dcs" if decay_type == "false" else decay_type)
 
-    train_mask = dataframe["train"] if train else ~dataframe["train"]
+    if train is True:
+        train_mask = dataframe["train"]
+    elif train is False:
+        train_mask = ~dataframe["train"]
+    else:
+        print("ampgen: using both test + train")
+        train_mask = np.ones(len(dataframe), dtype=np.bool_)
+
     dataframe = dataframe[train_mask]
 
     if k_charge == "k_plus":
