@@ -9,6 +9,7 @@ or by performing a fit to the decay times
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm  # progress bar library
 from lib_efficiency.reweighter import EfficiencyWeighter
 from lib_efficiency import time_fitter
 
@@ -69,13 +70,15 @@ def _orig_points(gen: np.random.Generator, n_gen: int) -> np.ndarray:
     n_generated = 0
     max_lifetimes = 8
     max_pdf = 0.5
-    while n_generated < n_gen:
-        x = max_lifetimes * gen.random()
-        y = max_pdf * gen.random()
+    with tqdm(total = n_gen) as pbar:
+        while n_generated < n_gen:
+            x = max_lifetimes * gen.random()
+            y = max_pdf * gen.random()
 
-        if y < pdf(x, params):
-            times[n_generated] = x
-            n_generated += 1
+            if y < pdf(x, params):
+                times[n_generated] = x
+                n_generated += 1
+                pbar.update(1)
 
     return np.column_stack((phsp, times))
 
@@ -138,7 +141,8 @@ def main():
     # (x1, x2, x3, x4, x5, t) where each x is a phase space variable
     # (e.g. using fourbody.param.helicity_param)
     gen = np.random.default_rng()
-    n_gen = 20000
+    n_gen = 50000
+    print("generating toys")
     target = _target_points(gen, n_gen)
     original = _orig_points(gen, n_gen)
 
@@ -153,7 +157,7 @@ def main():
     # Create a reweighter with a fit
     # This reweighter will set all weights below the min time to 0, but perform the
     # fit using all times
-    min_t = 0.4
+    min_t = 0.45
     print("\ncreating time fit reweighter")
     fit_weighter = EfficiencyWeighter(
         target, original, fit=True, min_t=min_t, **train_kwargs

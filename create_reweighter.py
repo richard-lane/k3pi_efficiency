@@ -52,9 +52,9 @@ def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 20,
+        "n_estimators": 50,
         "max_depth": 5,
-        "learning_rate": 0.9,
+        "learning_rate": 0.7,
         "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(

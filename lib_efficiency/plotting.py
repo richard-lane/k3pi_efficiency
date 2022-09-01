@@ -45,13 +45,16 @@ def projections(
     fig, ax = plt.subplots(2, 3, figsize=(12, 8))
 
     hist_kw = {"density": True, "histtype": "step"}
-    for axis, ag_x, mc_x in zip(ax.ravel(), ag.T, mc.T):
+    for axis, ag_x, mc_x, label in zip(ax.ravel(), ag.T, mc.T, phsp_labels()):
         _, bins, _ = axis.hist(ag_x, bins=100, label="AG", **hist_kw)
         axis.hist(mc_x, bins=bins, label="MC", **hist_kw, alpha=0.5)
         if mc_wt is not None:
             axis.hist(mc_x, bins=bins, label="Reweighted", **hist_kw, weights=mc_wt)
 
+        axis.set_xlabel(label)
+
     ax[0, 0].legend()
+    fig.tight_layout()
 
     return fig, ax
 
@@ -168,7 +171,6 @@ def plot_ratios(
     ax[0].set_ylabel(r"$\frac{WS}{RS}$ ratio")
     for a in ax:
         a.set_xlabel(r"t/$\tau$")
-    ax[2].text(0.2, 0.92, "Errors are approximate")
 
     fig.tight_layout()
     plt.subplots_adjust(wspace=0)
