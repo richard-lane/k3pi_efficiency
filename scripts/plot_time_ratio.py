@@ -36,8 +36,12 @@ def _times_and_weights(
     Get testing times and weights
 
     """
-    pgun_df = efficiency_util.pgun_df(sign, data_sign, train=False)
-    ampgen_df = efficiency_util.ampgen_df(sign, data_sign, train=False)
+    if sign == "false":
+        pgun_df = efficiency_util.pgun_df(sign, data_sign, train=False)
+        ampgen_df = efficiency_util.ampgen_df("cf", data_sign, train=False)
+    else:
+        pgun_df = efficiency_util.pgun_df(sign, data_sign, train=False)
+        ampgen_df = efficiency_util.ampgen_df(sign, data_sign, train=False)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
@@ -53,7 +57,7 @@ def _times_and_weights(
         mc_t,
         weighter_sign,
         year,
-        sign,
+        "cf" if sign == "false" else sign,
         magnetisation,
         fit,
         verbose=True,
@@ -94,7 +98,7 @@ def main(args: argparse.Namespace):
     rs_ag_t, rs_mc_t, rs_wt = _times_and_weights(
         args.year,
         args.magnetisation,
-        "cf",
+        "false",
         args.data_k_charge,
         args.weighter_k_charge,
         args.fit,

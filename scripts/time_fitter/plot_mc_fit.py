@@ -43,6 +43,8 @@ def main(year: str, sign: str, magnetisation: str):
 
     fig.suptitle(f"MC {sign}")
 
+    plt.savefig(f"time_fit_{year}_{sign}_{magnetisation}.png")
+
     plt.show()
 
 
