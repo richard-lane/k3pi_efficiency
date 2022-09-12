@@ -36,8 +36,8 @@ def _bc_params(
 
     """
     z_mag, z_phase = coherence_factor(*efficiency_util.k_3pi(dataframe), weights)
-    z_re = -z_mag * np.cos(z_phase)
-    z_im = -z_mag * np.sin(z_phase)
+    z_re = z_mag * np.cos(np.pi + z_phase)
+    z_im = z_mag * np.sin(np.pi + z_phase)
 
     return (params.mixing_x * z_im + params.mixing_y * z_re), (
         params.mixing_x ** 2 + params.mixing_y ** 2
@@ -99,12 +99,12 @@ def _time_plot(
     plotting.no_mixing(ax, best_val, "k--")
 
     # Mixing
+    print(weighted_minuit)
     plotting.no_constraints(ax, weighted_minuit.values, "r--", "Fit (mixing)")
 
     # Actual value
-    # TODO fix this, it doesn't look right
-    # ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params))
-    # plotting.no_constraints(ax, ideal, "k--", "True")
+    ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params))
+    plotting.no_constraints(ax, ideal, "k--", "True")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")
