@@ -210,7 +210,7 @@ def ws_mixing_weights(
     assert k_charge == 1
 
     # Evaluate amplitudes
-    cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge)
-    dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge)
+    cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge) / amplitudes.CF_AVG
+    dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge) / amplitudes.DCS_AVG
 
     return _ws_weights(t_lifetimes, dcs_amplitudes, cf_amplitudes, mixing_params, q_p)

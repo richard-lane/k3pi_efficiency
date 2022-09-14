@@ -18,6 +18,7 @@ import pdg_params
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.plotting import phsp_labels
 from lib_efficiency.phsp_binning import coherence_factor
+from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
 from lib_time_fit import fitter, plotting
 
@@ -28,14 +29,41 @@ def _weight_hist(weights: np.ndarray) -> None:
     plt.show()
 
 
+def _z(r_d: float, dataframe: pd.DataFrame, weights: np.ndarray):
+    """
+    Coherence factor given the desired amplitude ratio
+
+    """
+    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+
+    cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.CF_AVG
+    # TODO try rotating
+    # TODO try scaling a bit
+    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1) * r_d / amplitudes.DCS_AVG
+
+    # Find Z and integrals
+    z = np.sum(cf * dcs.conjugate() * weights)
+    num_dcs = np.sum((np.abs(dcs) ** 2) * weights)
+    num_cf = np.sum((np.abs(cf) ** 2) * weights)
+
+    # Find R, d and return
+    R = abs(z) / np.sqrt(num_dcs * num_cf)
+    d = np.angle(z, deg=True)
+
+    return R, d
+
+
 def _bc_params(
-    dataframe: pd.DataFrame, weights: np.ndarray, params: mixing.MixingParams
+    dataframe: pd.DataFrame,
+    weights: np.ndarray,
+    params: mixing.MixingParams,
+    r_d: float,
 ) -> Tuple[float, float]:
     """
     Time ratio params, assuming rD = 1 and times in lifetimes
 
     """
-    z_mag, z_phase = coherence_factor(*efficiency_util.k_3pi(dataframe), weights)
+    z_mag, z_phase = _z(r_d, dataframe, weights)
     z_re = z_mag * np.cos(np.pi + z_phase)
     z_im = z_mag * np.sin(np.pi + z_phase)
 
@@ -103,7 +131,8 @@ def _time_plot(
     plotting.no_constraints(ax, weighted_minuit.values, "r--", "Fit (mixing)")
 
     # Actual value
-    ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params))
+    # rD of 1
+    ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params, 1))
     plotting.no_constraints(ax, ideal, "k--", "True")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
